@@ -24,10 +24,10 @@ Runs automatically on login via a systemd service or login hook so your financia
 - Nothing leaves your machine
 
 ## Roadmap
-- [ ] BofA PDF statement parser
-- [ ] Fidelity CSV statement parser
-- [ ] Balance & spending aggregation
-- [ ] Terminal output mode
+- [x] BofA PDF statement parser
+- [x] Fidelity CSV statement parser
+- [x] Balance & spending aggregation
+- [x] Terminal output mode
 - [ ] GUI dashboard
 - [ ] Startup on login
 - [ ] Local AI financial health analysis
