@@ -15,6 +15,14 @@ Aggregates balances, spending, and transaction history across both.
 - Terminal output by default — fast, minimal, always available
 - Optional GUI dashboard with charts and summaries
 
+## Features
+- Shows current net worth
+- Predicts future net worths based on historical data
+- Identifies and shows repeat transactions to help detect fraud or unnecessary spending
+- Provides insights into cash flow and budgeting
+- Generates reports on investment performance
+- Alerts for upcoming bills and reminders for financial goals
+
 ## Startup
 Runs automatically on login via a systemd service or login hook so your financial snapshot is ready when you sit down.
 
