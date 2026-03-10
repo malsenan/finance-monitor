@@ -1,2 +1,33 @@
 # finance-monitor
-Monitor all your finances in one place
+Monitor all your finances in one place.
+Making sure you max out your retirement plans and stay under your credit limit by 30%.
+
+## How It Works
+
+Drop in your statements and finance-monitor parses them locally — no bank logins, no APIs, no data leaving your machine.
+
+- **Bank of America** — parses exported PDF statements
+- **Fidelity** — parses exported CSV statements
+
+Aggregates balances, spending, and transaction history across both.
+
+## Display
+- Terminal output by default — fast, minimal, always available
+- Optional GUI dashboard with charts and summaries
+
+## Startup
+Runs automatically on login via a systemd service or login hook so your financial snapshot is ready when you sit down.
+
+## AI Health Check (Planned)
+- Offline, local AI model analyzes your parsed data
+- Flags overspending, low balances, retirement contribution gaps, high credit utilization, and other trends
+- Nothing leaves your machine
+
+## Roadmap
+- [ ] BofA PDF statement parser
+- [ ] Fidelity CSV statement parser
+- [ ] Balance & spending aggregation
+- [ ] Terminal output mode
+- [ ] GUI dashboard
+- [ ] Startup on login
+- [ ] Local AI financial health analysis
