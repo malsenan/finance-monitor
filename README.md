@@ -42,3 +42,4 @@ Runs automatically on login via a systemd service or login hook so your financia
 
 ## Todo
 - Research openclaw
+- Install aider and ollama in the Boxes VM, TURN OFF NETWORK CONNECTION AFTER, run parsers on the statements in the shared folders, analyze the parsed data and determine how to code the rest of the app
