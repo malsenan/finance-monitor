@@ -1,8 +1,18 @@
 import os
 import csv
+from typing import List, Dict
 
 # Function to parse a single credit file and return processed data
-def parse_credit_file(file_path):
+def parse_credit_file(file_path: str) -> List[Dict[str, object]]:
+    """
+    Parses a single credit CSV file and returns the processed data.
+
+    Parameters:
+    - file_path (str): The path to the credit CSV file.
+
+    Returns:
+    - List[Dict[str, object]]: A list of dictionaries containing the parsed data.
+    """
     # Open the CSV file in read mode
     with open(file_path, mode='r', newline='') as file:
         # Create a CSV reader object using DictReader to read the file
@@ -25,7 +35,16 @@ def parse_credit_file(file_path):
     return parsed_data
 
 # Function to aggregate data from all CSV files in a specified directory
-def aggregate_credit_files(directory):
+def aggregate_credit_files(directory: str) -> List[Dict[str, object]]:
+    """
+    Aggregates data from all credit CSV files in a specified directory.
+
+    Parameters:
+    - directory (str): The path to the directory containing the credit CSV files.
+
+    Returns:
+    - List[Dict[str, object]]: A list of dictionaries containing the aggregated data.
+    """
     # Initialize an empty list to store aggregated data
     aggregated_data = []
     # Iterate over each file in the specified directory
@@ -42,7 +61,14 @@ def aggregate_credit_files(directory):
     return aggregated_data
 
 # Function to save the aggregated data to a single CSV file
-def save_to_csv(data, output_file):
+def save_to_csv(data: List[Dict[str, object]], output_file: str) -> None:
+    """
+    Saves the aggregated data to a single CSV file.
+
+    Parameters:
+    - data (List[Dict[str, object]]): The list of dictionaries containing the aggregated data.
+    - output_file (str): The path to the output CSV file.
+    """
     # Define the fieldnames for the output CSV file
     fieldnames = ['date', 'reference', 'payee', 'address', 'amount']
     # Open the output CSV file in write mode
@@ -56,7 +82,10 @@ def save_to_csv(data, output_file):
             writer.writerow(row)
 
 # Main function to coordinate the parsing and aggregation process
-def main():
+def main() -> None:
+    """
+    Main function to coordinate the parsing and aggregation process.
+    """
     # Define the directory containing the credit files
     directory = 'finances/credit'
     # Define the output file name for the aggregated data
