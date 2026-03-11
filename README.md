@@ -23,6 +23,12 @@ Aggregates balances, spending, and transaction history across both.
 - Provides insights into cash flow and budgeting
 - Generates reports on investment performance
 - Alerts for upcoming bills and reminders for financial goals
+- Calculates and displays monthly average spending
+- Shows the percentage of income spent on essentials (e.g., housing, food)
+- Identifies high-interest debt and suggests strategies to pay it off faster
+- Provides a breakdown of spending by category (e.g., groceries, entertainment, transportation)
+- Generates alerts for potential tax deductions or credits
+- Offers personalized financial advice based on user goals and risk tolerance
 
 ## Startup
 Runs automatically on login via a systemd service or login hook so your financial snapshot is ready when you sit down.
