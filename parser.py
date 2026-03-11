@@ -1,0 +1,31 @@
+import csv                                                                                                                                                                                                      
+                                                                                                                                                                                                                
+                                                                                                                                                                                                                
+                                                                                                                                                                                                                
+def parse_csv(file_path):                                                                                                                                                                                       
+                                                                                                                                                                                                                
+    with open(file_path, mode='r', newline='') as csvfile:                                                                                                                                                      
+                                                                                                                                                                                                                
+        reader = csv.DictReader(csvfile)                                                                                                                                                                        
+                                                                                                                                                                                                                
+        for row in reader:                                                                                                                                                                                      
+                                                                                                                                                                                                                
+            print(f"Posted Date: {row['Posted Date']}")                                                                                                                                                         
+                                                                                                                                                                                                                
+            print(f"Reference Number: {row['Reference Number']}")                                                                                                                                               
+                                                                                                                                                                                                                
+            print(f"Payee: {row['Payee']}")                                                                                                                                                                     
+                                                                                                                                                                                                                
+            print(f"Address: {row['Address']}")                                                                                                                                                                 
+                                                                                                                                                                                                                
+            print(f"Amount: ${row['Amount']:,.2f}")                                                                                                                                                             
+                                                                                                                                                                                                                
+            print("-" * 40)                                                                                                                                                                                     
+                                                                                                                                                                                                                
+                                                                                                                                                                                                                
+                                                                                                                                                                                                                
+if __name__ == '__main__':                                                                                                                                                                                      
+                                                                                                                                                                                                                
+    file_path = 'finances/bofa/credit/May2025_3653.csv'                                                                                                                                                        
+                                                                                                                                                                                                                
+    parse_csv(file_path) 
