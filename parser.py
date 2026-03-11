@@ -22,21 +22,53 @@ def combine_and_sort_transactions(folder):
 
     return all_transactions
 
+def aggregate_transactions(transactions):
+    aggregated_data = {}
+
+    for transaction in transactions:
+        key = (transaction['Payee'], transaction['Address'], transaction['Amount'])
+        if key not in aggregated_data:
+            aggregated_data[key] = {
+                'count': 0,
+                'dates': []
+            }
+        aggregated_data[key]['count'] += 1
+        aggregated_data[key]['dates'].append(transaction['Posted Date'])
+
+    # Sort by frequency (most frequent to least frequent) and then by date (most recent to least recent)
+    sorted_aggregated_data = sorted(
+        aggregated_data.items(),
+        key=lambda x: (-x[1]['count'], max(datetime.strptime(date, '%m/%d/%Y') for date in x[1]['dates']))
+    )
+
+    return sorted_aggregated_data
+
 def write_to_combined_csv(transactions, output_file):
     if not transactions:
         print("No transactions to write.")
         return
 
-    fieldnames = transactions[0].keys()
+    fieldnames = ['Payee', 'Address', 'Amount', 'Count', 'Most Recent Date']
     with open(output_file, mode='w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
-        for transaction in transactions:
-            writer.writerow(transaction)
+        for (payee, address, amount), data in transactions:
+            most_recent_date = max(data['dates'], key=lambda x: datetime.strptime(x, '%m/%d/%Y'))
+            writer.writerow({
+                'Payee': payee,
+                'Address': address,
+                'Amount': amount,
+                'Count': data['count'],
+                'Most Recent Date': most_recent_date
+            })
 
 if __name__ == '__main__':
     folder = "finances/bofa/credit"
     output_file = "allCreditTransactions.csv"
+    aggregated_output_file = "aggregatedCredit.csv"
 
     combined_transactions = combine_and_sort_transactions(folder)
     write_to_combined_csv(combined_transactions, output_file)
+
+    aggregated_transactions = aggregate_transactions(combined_transactions)
+    write_to_combined_csv(aggregated_transactions, aggregated_output_file)
