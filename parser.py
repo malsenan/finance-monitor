@@ -5,7 +5,7 @@ from typing import List, Dict
 # Function to parse a single credit file and return processed data
 def parse_credit_file(file_path: str) -> List[Dict[str, object]]:
     """
-    Parses a single credit CSV file and returns the processed data.
+    Parses a single credit transactions CSV file and returns the processed data.
 
     Parameters:
     - file_path (str): The path to the credit CSV file.
@@ -49,8 +49,8 @@ def aggregate_credit_files(directory: str) -> List[Dict[str, object]]:
     aggregated_data = []
     # Iterate over each file in the specified directory
     for filename in os.listdir(directory):
-        # Check if the file is a CSV file
-        if filename.endswith('.csv'):
+        # Check if the file is a CSV file for my credit account
+        if filename.endswith('_3653.csv'):
             # Construct the full path to the file
             file_path = os.path.join(directory, filename)
             # Parse the credit file and get the processed data
