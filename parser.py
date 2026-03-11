@@ -1,5 +1,6 @@
 import csv
 import os
+from datetime import datetime
 
 def parse_csv(file_path):
     with open(file_path, mode='r', newline='') as csvfile:
@@ -17,7 +18,7 @@ def combine_and_sort_transactions(folder):
             all_transactions.extend(transactions)
 
     # Sort transactions by 'Posted Date' from oldest to latest
-    all_transactions.sort(key=lambda x: x['Posted Date'], reverse=True)
+    all_transactions.sort(key=lambda x: datetime.strptime(x['Posted Date'], '%m/%d/%Y'))
 
     return all_transactions
 
