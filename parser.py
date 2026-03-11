@@ -16,8 +16,8 @@ def combine_and_sort_transactions(folder):
             print(transactions)
             all_transactions.extend(transactions)
 
-    # Sort transactions by 'Posted Date'
-    all_transactions.sort(key=lambda x: x['Posted Date'])
+    # Sort transactions by 'Posted Date' from oldest to latest
+    all_transactions.sort(key=lambda x: x['Posted Date'], reverse=True)
 
     return all_transactions
 
