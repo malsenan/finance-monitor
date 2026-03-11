@@ -13,6 +13,7 @@ def combine_and_sort_transactions(folder):
         if filename.endswith(".csv"):
             filepath = os.path.join(folder, filename)
             transactions = parse_csv(filepath)
+            print(transactions)
             all_transactions.extend(transactions)
 
     # Sort transactions by 'Posted Date'
