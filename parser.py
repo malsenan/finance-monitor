@@ -1,6 +1,7 @@
 import os
 import csv
 from typing import List, Dict
+from datetime import datetime
 
 # Function to parse a single credit file and return processed data
 def parse_credit_file(file_path: str) -> List[Dict[str, object]]:
@@ -57,7 +58,11 @@ def aggregate_credit_files(directory: str) -> List[Dict[str, object]]:
             parsed_data = parse_credit_file(file_path)
             # Extend the aggregated data list with the parsed data
             aggregated_data.extend(parsed_data)
-    # Return the aggregated data
+    
+    # Sort the aggregated data by date in ascending order (oldest to newest)
+    aggregated_data.sort(key=lambda x: datetime.strptime(x['date'], '%m/%d/%Y'))
+    
+    # Return the sorted aggregated data
     return aggregated_data
 
 # Function to save the aggregated data to a single CSV file
