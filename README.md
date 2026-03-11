@@ -46,6 +46,3 @@ Runs automatically on login via a systemd service or login hook so your financia
 - [ ] GUI dashboard
 - [ ] Startup on login
 - [ ] Local AI financial health analysis
-
-## Todo
-- Research openclaw
