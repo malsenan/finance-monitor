@@ -18,6 +18,7 @@ Aggregates balances, spending, and transaction history across both.
 
 ## Features
 - Shows current net worth
+- Aggregate transactions by address/payee on a dashboard, sort by  (ex: Claude - $20.19 x13 since Feb. 2026, $50 x1 since Nov. 2025)
 - Predicts future net worths based on historical data
 - Identifies and shows repeat transactions to help detect fraud or unnecessary spending
 - Provides insights into cash flow and budgeting
@@ -29,6 +30,7 @@ Aggregates balances, spending, and transaction history across both.
 - Provides a breakdown of spending by category (e.g., groceries, entertainment, transportation)
 - Generates alerts for potential tax deductions or credits
 - Offers personalized financial advice based on user goals and risk tolerance
+- The analyzer/AI can pick up on repeat or suspicious purchases
 
 ## Startup
 Runs automatically on login via a systemd service or login hook so your financial snapshot is ready when you sit down.
@@ -46,3 +48,4 @@ Runs automatically on login via a systemd service or login hook so your financia
 - [ ] GUI dashboard
 - [ ] Startup on login
 - [ ] Local AI financial health analysis
+- [ ] Pick up on repeat or suspicious purchases
