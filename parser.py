@@ -217,18 +217,18 @@ if __name__ == "__main__":
     # Save all transactions in a single data structure
     all_transactions = []
 
-    def date_key(t):
-        return datetime.strptime(t["date"], "%m/%d/%Y")
+    # def date_key(t):
+    #     return datetime.strptime(t["date"], "%m/%d/%Y")
 
     all_transactions = list(
         heapq.merge(
             credit_transactions,
             checking_transactions,
             savings_transactions,
-            key=date_key,
+            key=lambda t: datetime.strptime(t["date"], "%m/%d/%Y"),
+            reverse=True
         )
     )
-    all_transactions.reverse()
 
     # # Save the aggregated data to a single CSV file
     # save_to_csv(credit_transactions, 'parsed_data/parsedCreditTransactions.csv')
@@ -243,7 +243,7 @@ if __name__ == "__main__":
     credit_balance = credit_transactions[0]["balance"]
     with open("datapoints.txt", "a") as datafile:
         datafile.write(
-            f"Networth: {checking_balance + savings_balance + credit_balance}\n\n"
+            f"Net worth: {checking_balance + savings_balance + credit_balance}\n\n"
         )
 
     # Get last month's income, expense, and net cash flow
@@ -255,7 +255,7 @@ if __name__ == "__main__":
     headers = ["date", "checking", "savings", "credit"]
 
     # Define how many latest transactions you want to see for the accounts
-    num_transactions = 2
+    num_transactions = 10
 
     # Calculate col width from longest description/amount/balance
     col_width = (
@@ -273,10 +273,10 @@ if __name__ == "__main__":
 
     lines = []
     header = "".join(h.ljust(col_width) for h in headers)
-    lines.append(header)
-    lines.append("=" * len(header))
+    lines.append(header + '\n')
+    lines.append("=" * len(header) + '\n')
 
-    checking_ptr, savings_ptr, credit_ptr = 0
+    checking_ptr = savings_ptr = credit_ptr = 0
 
     # While we haven't exceeded number of transactions for all ptrs, iterate all 3 transactions at the same time
     while (
@@ -284,15 +284,44 @@ if __name__ == "__main__":
         or savings_ptr < num_transactions
         or credit_ptr < num_transactions
     ):
-        # Grab all current transaction dates
-        curr_dates = (
-            ([checking_transactions[checking_ptr]['date']] if checking_ptr < num_transactions else []) +
-            ([savings_transactions[savings_ptr]['date']] if savings_ptr < num_transactions else []) +
-            ([credit_transactions[credit_ptr]['date']] if credit_ptr < num_transactions else [])
-        )
+        ch_transaction = checking_transactions[checking_ptr] if checking_ptr < num_transactions else None
+        s_transaction = savings_transactions[savings_ptr] if savings_ptr < num_transactions else None
+        cr_transaction = credit_transactions[credit_ptr] if credit_ptr < num_transactions else None
 
-        # Get latest transaction first
-        latest_date = max([datetime.strptime(d, "%m/%d/%Y") for d in curr_dates])
+        # Get only latest transaction(s) from the candidates 
+        # Ex: if curr checking and savings transaction is 3/9/2026 and credit transaction is 3/6/2026, then only grab checking and savings to print 
+        candidates = [t for t in [ch_transaction, s_transaction, cr_transaction] if t is not None]
+        latest_date = max(datetime.strptime(t['date'], '%m/%d/%Y') for t in candidates)
+        latest = [t for t in candidates if datetime.strptime(t['date'], '%m/%d/%Y') == latest_date]
+        
+        # print([ch_transaction, s_transaction, cr_transaction])
+        print(latest)
+
+        row = latest_date.__str__()
+        if ch_transaction:
+            row += f"{ch_transaction['description']} | {ch_transaction['amount']} | {ch_transaction['balance']}".ljust(col_width)
+        else:
+            row += 'None'.ljust(col_width)
+        if s_transaction:
+            row += f"{s_transaction['description']} | {s_transaction['amount']} | {s_transaction['balance']}".ljust(col_width)
+        else:
+            row += 'None'.ljust(col_width)
+        if cr_transaction:
+            row += f"{cr_transaction['description']} | {cr_transaction['amount']} | {cr_transaction['balance']}".ljust(col_width)
+        else:
+            row += 'None'.ljust(col_width)
+
+        print(row)
+
+        if ch_transaction in latest:
+            checking_ptr += 1
+        if s_transaction in latest:
+            savings_ptr += 1
+        if cr_transaction in latest:
+            credit_ptr += 1
+    
+    with open("datapoints.txt", "a") as datafile:
+        datafile.writelines(lines)
 
 
     #     rows = [
