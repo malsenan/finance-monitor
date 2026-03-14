@@ -4,22 +4,6 @@ from typing import List
 
 from models import Transaction
 
-
-def _quarterly_indices(dates):
-    from datetime import timedelta
-    if not dates:
-        return []
-    indices = [0]
-    last = dates[0]
-    for i in range(1, len(dates)):
-        if dates[i] - last >= timedelta(days=90):
-            indices.append(i)
-            last = dates[i]
-    if indices[-1] != len(dates) - 1:
-        indices.append(len(dates) - 1)
-    return indices
-
-
 def _annotate_points(ax, dates, values, indices):
     for i in indices:
         ax.annotate(
@@ -33,21 +17,21 @@ def _annotate_points(ax, dates, values, indices):
         )
 
 
-def plot_running_balance(transactions: List[Transaction], balance_key: str, account: str):
+def plot_transaction_data(transactions: List[Transaction], transaction_key: str, graph_title: str):
     # Convert date strings to datetime objects for proper x-axis spacing
     dates = [datetime.strptime(t["date"], "%m/%d/%Y") for t in transactions]
-    balances = [t[balance_key] for t in transactions]
+    balances = [t[transaction_key] for t in transactions]
 
     fig, ax = plt.subplots(figsize=(12, 6))
 
     # Plot the line
     ax.plot(dates, balances)
 
-    notable = _quarterly_indices(dates)
-    _annotate_points(ax, dates, balances, dates[::10])
+    # Put annotate 7 points on the graph
+    _annotate_points(ax, dates, balances, [i for i in range(len(dates)) if i % (len(dates) // 7) == 0 or i == len(dates) - 1])
 
     # Labels and title
-    ax.set_title(f"{account.capitalize()} Running Balance")
+    ax.set_title(graph_title.capitalize())
     ax.set_xlabel("Date")
     ax.set_ylabel("Balance ($)")
 
@@ -57,4 +41,39 @@ def plot_running_balance(transactions: List[Transaction], balance_key: str, acco
     plt.tight_layout()
     plt.show()
     
+def plot_monthly_spending(transactions: List[Transaction], limit: float = None):
+    from collections import defaultdict
 
+    monthly = defaultdict(float)
+    for t in transactions:
+        if t["amount"] < 0:
+            date = datetime.strptime(t["date"], "%m/%d/%Y")
+            key = date.strftime("%Y-%m")
+            monthly[key] += t["amount"]
+            # print(str(date.date()))
+            if key == "2026-02":
+                print(monthly[key])
+
+    print(sum([t['amount'] for t in transactions if t['date'].startswith("02/") and t['date'].count("/2026") > 0 and t['amount'] < 0]))
+    sorted_months = sorted(monthly.items())
+    labels = [datetime.strptime(k, "%Y-%m").strftime("%b %Y") for k, _ in sorted_months]
+    values = [abs(v) for _, v in sorted_months]
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    bars = ax.bar(labels, values)
+
+    for bar, value in zip(bars, values):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), f"${value:,.0f}",
+                ha='center', va='bottom', fontsize=8)
+
+    if limit is not None:
+        ax.axhline(y=limit, color='red', linestyle='--', linewidth=1, label=f'Limit (${limit:,.0f})')
+        ax.legend()
+
+    ax.set_title("Monthly Spending")
+    ax.set_xlabel("Month")
+    ax.set_ylabel("Amount Spent ($)")
+    plt.xticks(rotation=45, ha='right')
+
+    plt.tight_layout()
+    plt.show()

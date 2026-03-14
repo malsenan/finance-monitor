@@ -49,3 +49,32 @@ Runs automatically on login via a systemd service or login hook so your financia
 - [ ] Startup on login
 - [ ] Local AI financial health analysis
 - [ ] Pick up on repeat or suspicious purchases
+
+# 📊 Finance Charts TODO
+
+## Per Account
+- [ ] Running balance over time (line chart)
+- [ ] Monthly spending vs income (bar chart)
+- [ ] Spending by category (pie chart)
+- [ ] Spending by category (bar chart)
+- [ ] Largest single transactions (horizontal bar chart)
+- [ ] Daily spend rate (line chart)
+- [ ] Cumulative spend over month (line chart)
+
+## Cross-Account
+- [ ] Net worth over time (line chart)
+- [ ] Side-by-side monthly spend per account (grouped bar chart)
+- [ ] Account balance comparison over time (multi-line chart)
+- [ ] Monthly cash flow trend — net income/expense per month (line chart)
+
+## Recurring / Aggregate Transactions
+- [ ] Top N recurring transactions by count (horizontal bar chart)
+- [ ] Recurring transaction frequency over time (Gantt-style scatter plot)
+- [ ] Average amount per recurring transaction (bar chart)
+
+## Trends & Insights
+- [ ] Month-over-month spending change % (bar chart)
+- [ ] Rolling 30-day average spend (line chart)
+- [ ] Spending heatmap by day of week vs week of month (heatmap)
+- [ ] Savings rate over time — savings delta / income (line chart)
+- [ ] Credit utilization over time (line chart)

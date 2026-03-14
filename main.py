@@ -10,7 +10,7 @@ from reporters import (
     log_transactions_since,
     log_top_aggregate_transactions,
 )
-from charts import plot_running_balance
+from charts import plot_transaction_data, plot_monthly_spending
 
 if __name__ == "__main__":
 
@@ -31,6 +31,11 @@ if __name__ == "__main__":
             reverse=True
         )
     )
+
+    # Save the parsed data to CSV files
+    save_to_csv(credit_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedCreditTransactions.csv')
+    save_to_csv(checking_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedCheckingTransactions.csv')
+    save_to_csv(savings_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedSavingsTransactions.csv')
     
     curr_balances = {'checking': 0, 'savings': 0, 'credit': 0}
     for t in all_transactions[::-1]:
@@ -38,9 +43,6 @@ if __name__ == "__main__":
         t['net_worth'] = round(sum(curr_balances.values(), 2))
 
     # Save the parsed data to CSV files
-    save_to_csv(credit_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedCreditTransactions.csv')
-    save_to_csv(checking_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedCheckingTransactions.csv')
-    save_to_csv(savings_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedSavingsTransactions.csv')
     save_to_csv(all_transactions, '/home/malsenan/Documents/finances/parsed_data/allParsedTransactions.csv')
     save_to_csv(checking_summary + savings_summary, '/home/malsenan/Documents/finances/parsed_data/accountSummaries.csv')
 
@@ -70,8 +72,16 @@ if __name__ == "__main__":
     with open('/home/malsenan/Documents/finances/parsed_data/stats.txt', 'w') as stats_file:
         stats_file.writelines('\n'.join(lines))
 
-    # Usage
-    # plot_running_balance(checking_transactions, balance_key='balance', account="checking")
-    # plot_running_balance(savings_transactions, balance_key='balance', account="savings")
-    # plot_running_balance(credit_transactions, balance_key='balance', account="credit")
-    plot_running_balance(all_transactions, balance_key='net_worth', account='net worth over time')
+    # Plot balance over time on checking, savings, and credit accounts
+    plot_transaction_data(checking_transactions, transaction_key='balance', graph_title="checking running balance")
+    plot_transaction_data(savings_transactions, transaction_key='balance', graph_title="savings running balance")
+    plot_transaction_data(credit_transactions, transaction_key='balance', graph_title="credit running balance")
+
+    # Plot net worth over time (checking + savings - credit)
+    # NOTE: The graph might look weird but thats because transactions between accounts create 2 bigs transactions: TO an account and FROM an account. These are separate transactions.
+    plot_transaction_data(all_transactions, transaction_key='net_worth', graph_title='net worth over time')
+
+    # Plot daily spending
+    plot_monthly_spending(credit_transactions, limit=284)
+    plot_monthly_spending(checking_transactions, limit=1000)
+    
