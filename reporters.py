@@ -12,7 +12,17 @@ def log_account_stats_between(
     end_month: int,
     end_year: int,
 ) -> List[str]:
+    """
+    Returns a summary of income, expenses, and net cash flow for an account within a date range.
 
+    Parameters:
+    - transactions: List of transactions for a single account.
+    - start_month / start_year: Inclusive start of the date range.
+    - end_month / end_year: Inclusive end of the date range.
+
+    Returns:
+    - List of formatted strings ready to be written to a report file.
+    """
     # Get spending + income by month/year
     monthly_transactions = [
         t
@@ -43,7 +53,19 @@ def log_last_x_transactions(checking_transactions: List[Transaction],
                             savings_transactions: List[Transaction],
                             credit_transactions: List[Transaction],
                             num_transactions: int) -> List[str]:
+    """
+    Returns the last N transactions across all three accounts, displayed side-by-side sorted by date.
 
+    Transactions are walked in parallel using pointers, always advancing the account(s) with the
+    most recent date first.
+
+    Parameters:
+    - checking_transactions / savings_transactions / credit_transactions: Per-account transaction lists.
+    - num_transactions: How many transactions to show per account.
+
+    Returns:
+    - List of formatted strings ready to be written to a report file.
+    """
     col_width = 70
 
     # Add headers first
@@ -103,6 +125,18 @@ def log_transactions_since(checking_transactions: List[Transaction],
                             credit_transactions: List[Transaction],
                             month: int,
                             year: int) -> List[str]:
+    """
+    Returns all transactions across accounts on or after the given month/year, displayed side-by-side.
+
+    Uses the same parallel-pointer approach as log_last_x_transactions.
+
+    Parameters:
+    - checking_transactions / savings_transactions / credit_transactions: Per-account transaction lists.
+    - month / year: Inclusive start date cutoff.
+
+    Returns:
+    - List of formatted strings ready to be written to a report file.
+    """
     col_width = 70
 
     # Add headers first
@@ -115,6 +149,13 @@ def log_transactions_since(checking_transactions: List[Transaction],
 
     checking_ptr = savings_ptr = credit_ptr = 0
 
+    def _is_before(t):
+        """Returns True if transaction t is before the given month/year cutoff, or if t is None."""
+        if t is None:
+            return True
+        d = datetime.strptime(t['date'], '%m/%d/%Y')
+        return d.year < year or (d.year == year and d.month < month)
+
     # While we haven't exceeded number of transactions for all ptrs, iterate all 3 transactions at the same time
     while (
         checking_ptr < len(checking_transactions) or
@@ -125,10 +166,8 @@ def log_transactions_since(checking_transactions: List[Transaction],
         s_transaction = savings_transactions[savings_ptr] if savings_ptr < len(savings_transactions) else None
         cr_transaction = credit_transactions[credit_ptr] if credit_ptr < len(credit_transactions) else None
 
-        if (
-            datetime.strptime(ch_transaction['date'], '%m/%d/%Y').year < year or (datetime.strptime(ch_transaction['date'], '%m/%d/%Y').year == year and datetime.strptime(ch_transaction['date'], '%m/%d/%Y').month < month)) and (
-                datetime.strptime(ch_transaction['date'], '%m/%d/%Y').year < year or (datetime.strptime(ch_transaction['date'], '%m/%d/%Y').year == year and datetime.strptime(ch_transaction['date'], '%m/%d/%Y').month < month)) and (
-                    datetime.strptime(ch_transaction['date'], '%m/%d/%Y').year < year or (datetime.strptime(ch_transaction['date'], '%m/%d/%Y').year == year and datetime.strptime(ch_transaction['date'], '%m/%d/%Y').month < month)):
+        # Stop once all remaining transactions are before the requested start date
+        if _is_before(ch_transaction) and _is_before(s_transaction) and _is_before(cr_transaction):
             break
 
         # Get only latest transaction(s) from the candidates
@@ -164,7 +203,19 @@ def log_transactions_since(checking_transactions: List[Transaction],
 
 
 def log_top_aggregate_transactions(transactions: List[Transaction], num_transactions: int) -> List[str]:
-    # Default dictionary where every entry (key = tuple(transaction, amount) has a default value as a dictionary with count, earliest_date, and latest_date
+    """
+    Groups transactions by (description, amount) and returns the top N most frequent ones.
+
+    Useful for spotting recurring charges like subscriptions or regular purchases.
+
+    Parameters:
+    - transactions: List of transactions for a single account.
+    - num_transactions: Number of top entries to include.
+
+    Returns:
+    - List of formatted strings ready to be written to a report file.
+    """
+    # Default dictionary where every entry (key = tuple(description, amount)) has count, earliest_date, and latest_date
     aggregated_transactions = defaultdict(lambda: {"count": 0, "earliest_date": None, "latest_date": None})
 
     for transaction in transactions:

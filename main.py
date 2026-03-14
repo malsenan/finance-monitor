@@ -40,7 +40,7 @@ if __name__ == "__main__":
     curr_balances = {'checking': 0, 'savings': 0, 'credit': 0}
     for t in all_transactions[::-1]:
         curr_balances[t['account']] = t['balance']
-        t['net_worth'] = round(sum(curr_balances.values(), 2))
+        t['net_worth'] = round(sum(curr_balances.values()), 2)
 
     # Save the parsed data to CSV files
     save_to_csv(all_transactions, '/home/malsenan/Documents/finances/parsed_data/allParsedTransactions.csv')
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         log_account_stats_between(checking_transactions, 2, 2026, 3, 2026) +
         log_account_stats_between(savings_transactions, 2, 2026, 3, 2026) +
         # Format and print out last X transactions for every account
-        log_last_x_transactions(checking_transactions, savings_transactions, checking_transactions, 10) +
+        log_last_x_transactions(checking_transactions, savings_transactions, credit_transactions, 10) +
         # Format and print out all transactions since mm/yyyy
         log_transactions_since(checking_transactions, savings_transactions, credit_transactions, 2, 2026) +
         # Aggregate equal transactions and log by most frequent (ex: Description: METRO 01/18 MOBILE PURCHASE WASH | Amount: -2.5 | Count: 3)
@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
     # Log the human readable data
     with open('/home/malsenan/Documents/finances/parsed_data/stats.txt', 'w') as stats_file:
-        stats_file.writelines('\n'.join(lines))
+        stats_file.write('\n'.join(lines))
 
     # Plot balance over time on checking, savings, and credit accounts
     plot_transaction_data(checking_transactions, transaction_key='balance', graph_title="checking running balance")

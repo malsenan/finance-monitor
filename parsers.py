@@ -103,10 +103,10 @@ def aggregate_credit_files(directory: str) -> List[Transaction]:
     # Sort the aggregated data by date in ascending order (oldest to newest)
     transactions.sort(key=lambda x: datetime.strptime(x["date"], "%m/%d/%Y"))
 
-    currBal = 0
+    curr_bal = 0
     for transaction in transactions:
-        transaction["balance"] = round(currBal + transaction["amount"], 2)
-        currBal += transaction["amount"]
+        transaction["balance"] = round(curr_bal + transaction["amount"], 2)
+        curr_bal += transaction["amount"]
 
     transactions.reverse()
 

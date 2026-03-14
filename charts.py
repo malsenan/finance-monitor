@@ -5,6 +5,7 @@ from typing import List
 from models import Transaction
 
 def _annotate_points(ax, dates, values, indices):
+    """Annotates selected data points on a matplotlib axis with value and date labels."""
     for i in indices:
         ax.annotate(
             f"${values[i]:,.0f}\n{dates[i].strftime('%m/%d/%y')}",
@@ -12,12 +13,18 @@ def _annotate_points(ax, dates, values, indices):
             xytext=(0, 8),
             textcoords='offset points',
             fontsize=8,
-            # ha='center',
-            # va='bottom',
         )
 
 
 def plot_transaction_data(transactions: List[Transaction], transaction_key: str, graph_title: str):
+    """
+    Plots a numeric field from a list of transactions over time as a line graph.
+
+    Parameters:
+    - transactions: List of transaction dicts, each containing a 'date' and the target key.
+    - transaction_key: The field name to plot on the y-axis (e.g. 'balance', 'net_worth').
+    - graph_title: Title displayed on the chart.
+    """
     # Convert date strings to datetime objects for proper x-axis spacing
     dates = [datetime.strptime(t["date"], "%m/%d/%Y") for t in transactions]
     balances = [t[transaction_key] for t in transactions]
@@ -42,6 +49,15 @@ def plot_transaction_data(transactions: List[Transaction], transaction_key: str,
     plt.show()
     
 def plot_monthly_spending(transactions: List[Transaction], limit: float = None):
+    """
+    Plots total monthly spending as a bar chart, with an optional spending limit line.
+
+    Only negative amounts (expenses) are included. Each bar is labeled with its dollar value.
+
+    Parameters:
+    - transactions: List of transaction dicts, each containing 'date' and 'amount'.
+    - limit: Optional spending limit to display as a horizontal dashed red line.
+    """
     from collections import defaultdict
 
     monthly = defaultdict(float)
@@ -50,11 +66,6 @@ def plot_monthly_spending(transactions: List[Transaction], limit: float = None):
             date = datetime.strptime(t["date"], "%m/%d/%Y")
             key = date.strftime("%Y-%m")
             monthly[key] += t["amount"]
-            # print(str(date.date()))
-            if key == "2026-02":
-                print(monthly[key])
-
-    print(sum([t['amount'] for t in transactions if t['date'].startswith("02/") and t['date'].count("/2026") > 0 and t['amount'] < 0]))
     sorted_months = sorted(monthly.items())
     labels = [datetime.strptime(k, "%Y-%m").strftime("%b %Y") for k, _ in sorted_months]
     values = [abs(v) for _, v in sorted_months]

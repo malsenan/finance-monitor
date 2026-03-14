@@ -10,8 +10,10 @@ def save_to_csv(data: List[Dict[str, object]], output_file: str) -> None:
     - data (List[Dict[str, object]]): The list of dictionaries containing the aggregated data.
     - output_file (str): The path to the output CSV file.
     """
-    # Define the fieldnames for the output CSV file
-    fieldnames = list(data)[0].keys()
+    if not data:
+        return
+    # Derive fieldnames from the first row
+    fieldnames = data[0].keys()
     # Open the output CSV file in write mode
     with open(output_file, mode="w", newline="") as file:
         # Create a CSV writer object using DictWriter to write the file
