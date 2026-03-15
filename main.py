@@ -2,7 +2,7 @@ import heapq
 from datetime import datetime
 from typing import List
 
-from parsers import aggregate_credit_files, parse_checking_or_savings_file
+from parsers import aggregate_credit_files, parse_checking_or_savings_file, aggregate_fidelity_files
 from exporters import save_to_csv
 from reporters import (
     log_account_stats_between,
@@ -10,7 +10,14 @@ from reporters import (
     log_transactions_since,
     log_top_aggregate_transactions,
 )
-from charts import plot_transaction_data, plot_monthly_spending
+from charts import (
+    plot_line_monthly_balance, 
+    plot_bar_monthly_income_vs_spending,
+    plot_line_fidelity_portfolio, 
+    plot_line_fidelity_per_account, 
+    plot_line_fidelity_holdings
+)
+from validator import validate_balance
 
 if __name__ == "__main__":
 
@@ -20,6 +27,10 @@ if __name__ == "__main__":
     # Parse checking and savings account transactions and summaries
     checking_summary, checking_transactions = parse_checking_or_savings_file("/home/malsenan/Documents/finances/bofa/debit/checkingTransactions.csv")
     savings_summary, savings_transactions = parse_checking_or_savings_file("/home/malsenan/Documents/finances/bofa/savings/savingsTransactions.csv")
+
+    # Validate all transactions are accounted for in the running balances
+    validate_balance(checking_transactions)
+    validate_balance(savings_transactions)
 
     # Save all transactions in a single data structure
     all_transactions = list(
@@ -37,8 +48,10 @@ if __name__ == "__main__":
     save_to_csv(checking_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedCheckingTransactions.csv')
     save_to_csv(savings_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedSavingsTransactions.csv')
     
-    curr_balances = {'checking': 0, 'savings': 0, 'credit': 0}
+    curr_balances = {}
+    curr_date = None
     for t in all_transactions[::-1]:
+        curr_date = t['date']
         curr_balances[t['account']] = t['balance']
         t['net_worth'] = round(sum(curr_balances.values()), 2)
 
@@ -72,16 +85,26 @@ if __name__ == "__main__":
     with open('/home/malsenan/Documents/finances/parsed_data/stats.txt', 'w') as stats_file:
         stats_file.write('\n'.join(lines))
 
-    # Plot balance over time on checking, savings, and credit accounts
-    plot_transaction_data(checking_transactions, transaction_key='balance', graph_title="checking running balance")
-    plot_transaction_data(savings_transactions, transaction_key='balance', graph_title="savings running balance")
-    plot_transaction_data(credit_transactions, transaction_key='balance', graph_title="credit running balance")
-
     # Plot net worth over time (checking + savings - credit)
-    # NOTE: The graph might look weird but thats because transactions between accounts create 2 bigs transactions: TO an account and FROM an account. These are separate transactions.
-    plot_transaction_data(all_transactions, transaction_key='net_worth', graph_title='net worth over time')
+    plot_line_monthly_balance(all_transactions, graph_title='net worth over time')
 
-    # Plot daily spending
-    plot_monthly_spending(credit_transactions, limit=284)
-    plot_monthly_spending(checking_transactions, limit=1000)
+    # Plot balance over time on checking, savings, and credit accounts
+    plot_line_monthly_balance(checking_transactions, graph_title="checking running balance")
+    plot_line_monthly_balance(savings_transactions, graph_title="savings running balance")
+    plot_line_monthly_balance(credit_transactions, graph_title="credit running balance")
+
+    # Plot daily income vs. spending
+    plot_bar_monthly_income_vs_spending(all_transactions, graph_title="Total Monthly Income vs. Spending", limit=1000)
+    plot_bar_monthly_income_vs_spending(checking_transactions, graph_title="Checking Monthly Income vs. Spending", limit=1000)
+    plot_bar_monthly_income_vs_spending(savings_transactions, graph_title="Savings Monthly Income vs. Spending", limit=1000)
+    plot_bar_monthly_income_vs_spending(credit_transactions, graph_title="Credit Monthly Income vs. Spending", limit=284)
+
+
+    # Parse and plot Fidelity investment statements
+    fidelity_summaries, fidelity_holdings = aggregate_fidelity_files('/home/malsenan/Documents/finances/fidelity')
+    save_to_csv(fidelity_summaries, '/home/malsenan/Documents/finances/parsed_data/fidelitySummaries.csv')
+    save_to_csv(fidelity_holdings, '/home/malsenan/Documents/finances/parsed_data/fidelityHoldings.csv')
+    plot_line_fidelity_portfolio(fidelity_summaries)
+    plot_line_fidelity_per_account(fidelity_summaries)
+    plot_line_fidelity_holdings(fidelity_holdings)
     
