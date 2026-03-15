@@ -101,30 +101,26 @@ Runs automatically on login via a systemd service or login hook so your financia
 - [ ] Calculate dividend yield relative to portfolio value
 - [ ] Separate gains from contributions using `change_in_investment`
 
-=======================================================
- FIELD REFERENCE
-=======================================================
+## Field Reference
 
- ACCOUNT SUMMARY
- -------------------------------------------------------
- beginning_mkt_value  Total market value at start of period
- change_in_investment Net cash flow in/out (deposits - withdrawals, no gains)
- ending_mkt_value     Total market value at end of period
- dividends_period     Dividends earned this period
- dividends_ytd        Dividends earned YTD (cumulative)
- total_period         Total return this period (gains + dividends)
- total_ytd            Total return YTD (cumulative)
+### Account Summary
+| Field | Description |
+|---|---|
+| `beginning_mkt_value` | Total market value at the start of the period |
+| `change_in_investment` | Net cash flow in/out during the period (deposits − withdrawals, excludes gains) |
+| `ending_mkt_value` | Total market value at the end of the period |
+| `dividends_period` | Dividends earned during this specific period |
+| `dividends_ytd` | Dividends earned from Jan 1st through end of period (cumulative) |
+| `total_period` | Total return for this period (gains + dividends) |
+| `total_ytd` | Total return from Jan 1st through end of period (cumulative) |
 
- HOLDINGS
- -------------------------------------------------------
- quantity             Number of shares owned
- price                Price per share at end of period
- beginning_value      Market value at start of period (quantity x price at open)
- ending_value         Market value at end of period (quantity x price at close)
- cost_basis           Total amount paid for shares (used to calculate gains/losses)
+### Holdings
+| Field | Description |
+|---|---|
+| `quantity` | Number of shares owned |
+| `price` | Price per share at end of period |
+| `beginning_value` | Market value at start of period (`quantity × price` at open) |
+| `ending_value` | Market value at end of period (`quantity × price` at close) |
+| `cost_basis` | Total amount originally paid for shares — used to calculate gains/losses |
 
-=======================================================
- NOTE: cost_basis vs beginning_value
-   cost_basis      = what you originally paid (historical)
-   beginning_value = what it was worth at start of this period (recent)
-=======================================================
+> **Note:** `cost_basis` is what you *paid* historically, while `beginning_value` is what it was *worth* at the start of the current period.

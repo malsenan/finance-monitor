@@ -179,8 +179,6 @@ def parse_fidelity_file(file_path: str) -> Tuple[List[Dict], List[Dict]]:
 
     # --- Holdings section (rows 7+, 0-indexed) ---
     holdings = []
-    # Tracks which account block we're currently inside (-1 = before first account row)
-    # current_account_idx = -1
 
     line_num = 10 
     holdings_fieldnames = next(csv.reader([lines[5]]))
@@ -201,50 +199,6 @@ def parse_fidelity_file(file_path: str) -> Tuple[List[Dict], List[Dict]]:
             # unrealized = round(ending_value - cost_basis, 2) if ending_value is not None and cost_basis is not None else None
         })
         line_num += 5
-        # parsed_lines.append(csv.DictReader(f"{account_number_to_type_map[lines[line_num - 2]]}," + lines[line_num], filednames=['AccountType'] + lines[5]))
-
-    # for line in lines[7:]:
-    #     row = next(csv.reader([line]))
-    #     # Ensure at least 7 columns so index access below is always safe
-    #     while len(row) < 7:
-    #         row.append("")
-    #     non_empty = [c for c in row if c.strip()]
-    #     if not non_empty:
-    #         continue  # blank line
-    #     first = row[0].strip()
-    #     if not first:
-    #         continue  # row with empty first cell (can happen with trailing commas)
-    #     if first.startswith("Subtotal"):
-    #         continue  # subtotal summary rows, e.g. "Subtotal of Mutual Funds"
-    #     if first in known_categories:
-    #         continue  # category header rows, e.g. "Mutual Funds"
-
-    #     # Account number row: only the first cell is non-empty (the account number string)
-    #     # Each such row starts a new account block; we map it to the next account_type in order
-    #     if len(non_empty) == 1:
-    #         current_account_idx += 1
-    #         continue
-
-    #     # Everything else with data in multiple columns is an actual fund/security row
-    #     if current_account_idx < 0 or current_account_idx >= len(account_type_order):
-    #         continue  # guard: skip any data rows that appear before the first account marker
-
-    #     ending_value = safe_float(row[5])
-    #     cost_basis = safe_float(row[6])
-    #     # Unrealized gain/loss = current market value minus what was paid for the shares
-    #     unrealized = round(ending_value - cost_basis, 2) if ending_value is not None and cost_basis is not None else None
-    #     holdings.append({
-    #         "date": date,
-    #         "account_type": account_type_order[current_account_idx],
-    #         "symbol": first,
-    #         "description": row[1].strip(),
-    #         "quantity": safe_float(row[2]),
-    #         "price": safe_float(row[3]),
-    #         "beginning_value": safe_float(row[4]),
-    #         "ending_value": ending_value,
-    #         "cost_basis": cost_basis,
-    #         "unrealized_gain_loss": unrealized,
-    #     })
 
     return account_summaries, holdings
 
