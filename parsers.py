@@ -3,7 +3,7 @@ import csv
 from typing import List, Dict, Tuple
 from datetime import datetime
 
-from models import BankTransaction
+from models import BankTransaction, FidelityTransaction
 
 def parse_checking_or_savings_file(file_path: str) -> Tuple[List[Dict[str, object]], List[BankTransaction]]:
     """
@@ -122,7 +122,7 @@ def aggregate_credit_files(directory: str) -> List[BankTransaction]:
 
     return transactions
 
-def parse_fidelity_file(file_path: str) -> Tuple[List[Dict], List[Dict]]:
+def parse_fidelity_file(file_path: str) -> Tuple[List[Dict], List[FidelityTransaction]]:
     """
     Parses a Fidelity investment statement CSV file.
 
@@ -167,7 +167,7 @@ def parse_fidelity_file(file_path: str) -> Tuple[List[Dict], List[Dict]]:
         account_number_to_type_map[row["Account"]] = row["Account Type"]
         account_summaries.append({
             "date": date,
-            "account_type": row["Account Type"].strip(),
+            "account": row["Account Type"].strip(),
             "beginning_mkt_value": safe_float(row["Beginning mkt Value"]),
             "change_in_investment": safe_float(row["Change in Investment"]),
             "ending_mkt_value": safe_float(row["Ending mkt Value"]),
@@ -187,14 +187,14 @@ def parse_fidelity_file(file_path: str) -> Tuple[List[Dict], List[Dict]]:
         transaction = next(csv.DictReader([lines[line_num]], fieldnames=holdings_fieldnames))
         holdings.append({
             "date": date,
-            "account_type": account_number_to_type_map[lines[line_num - 2].strip()],
+            "account": account_number_to_type_map[lines[line_num - 2].strip()],
             "symbol": transaction["Symbol/CUSIP"],
             "description": transaction["Description"],
             "quantity": safe_float(transaction["Quantity"]),
             "price": safe_float(transaction["Price"]),
             "beginning_value": safe_float(transaction["Beginning Value"]),
-            "ending_value": transaction["Ending Value"],
-            "cost_basis": transaction["Cost Basis"],
+            "ending_value": safe_float(transaction["Ending Value"]),
+            "cost_basis": safe_float(transaction["Cost Basis"]),
             # Unrealized gain/loss = current market value minus what was paid for the shares
             # unrealized = round(ending_value - cost_basis, 2) if ending_value is not None and cost_basis is not None else None
         })
