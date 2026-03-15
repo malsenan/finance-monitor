@@ -78,3 +78,53 @@ Runs automatically on login via a systemd service or login hook so your financia
 - [ ] Spending heatmap by day of week vs week of month (heatmap)
 - [ ] Savings rate over time — savings delta / income (line chart)
 - [ ] Credit utilization over time (line chart)
+
+## FIDELITY TODO
+
+### Transaction / Holdings Data
+- [ ] Plot `ending_value` over time per account and combined (portfolio growth)
+- [ ] Calculate and display unrealized gains/losses (`ending_value - cost_basis`)
+- [ ] Calculate return % per holding (`(ending_value - cost_basis) / cost_basis * 100`)
+- [ ] Pie/bar chart of portfolio split by account type (Roth IRA vs Individual)
+- [ ] Side-by-side bar chart of cost basis vs current market value
+- [ ] Holdings concentration chart by symbol (if multiple symbols)
+
+### Account Summary Data
+- [ ] Plot `ending_mkt_value` over time per account and combined
+- [ ] Track contributions/withdrawals over time via `change_in_investment`
+- [ ] Plot dividend income over time (`dividends_period`) and cumulative (`dividends_ytd`)
+- [ ] Trend `total_period` and `total_ytd` returns over time
+- [ ] Side-by-side account comparison (Roth vs Individual growth)
+
+### Combined Insights
+- [ ] Cross-reference holdings cost basis with summary returns for actual return analysis
+- [ ] Calculate dividend yield relative to portfolio value
+- [ ] Separate gains from contributions using `change_in_investment`
+
+=======================================================
+ FIELD REFERENCE
+=======================================================
+
+ ACCOUNT SUMMARY
+ -------------------------------------------------------
+ beginning_mkt_value  Total market value at start of period
+ change_in_investment Net cash flow in/out (deposits - withdrawals, no gains)
+ ending_mkt_value     Total market value at end of period
+ dividends_period     Dividends earned this period
+ dividends_ytd        Dividends earned YTD (cumulative)
+ total_period         Total return this period (gains + dividends)
+ total_ytd            Total return YTD (cumulative)
+
+ HOLDINGS
+ -------------------------------------------------------
+ quantity             Number of shares owned
+ price                Price per share at end of period
+ beginning_value      Market value at start of period (quantity x price at open)
+ ending_value         Market value at end of period (quantity x price at close)
+ cost_basis           Total amount paid for shares (used to calculate gains/losses)
+
+=======================================================
+ NOTE: cost_basis vs beginning_value
+   cost_basis      = what you originally paid (historical)
+   beginning_value = what it was worth at start of this period (recent)
+=======================================================

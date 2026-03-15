@@ -1,7 +1,7 @@
 from typing import TypedDict
 
 
-class Transaction(TypedDict):
+class BankTransaction(TypedDict):
     account: str
     date: str
     description: str

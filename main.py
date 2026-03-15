@@ -85,26 +85,26 @@ if __name__ == "__main__":
     with open('/home/malsenan/Documents/finances/parsed_data/stats.txt', 'w') as stats_file:
         stats_file.write('\n'.join(lines))
 
-    # Plot net worth over time (checking + savings - credit)
-    plot_line_monthly_balance(all_transactions, graph_title='net worth over time')
+    # # Plot net worth over time (checking + savings - credit)
+    # plot_line_monthly_balance(all_transactions, graph_title='net worth over time')
 
-    # Plot balance over time on checking, savings, and credit accounts
-    plot_line_monthly_balance(checking_transactions, graph_title="checking running balance")
-    plot_line_monthly_balance(savings_transactions, graph_title="savings running balance")
-    plot_line_monthly_balance(credit_transactions, graph_title="credit running balance")
+    # # Plot balance over time on checking, savings, and credit accounts
+    # plot_line_monthly_balance(checking_transactions, graph_title="checking running balance")
+    # plot_line_monthly_balance(savings_transactions, graph_title="savings running balance")
+    # plot_line_monthly_balance(credit_transactions, graph_title="credit running balance")
 
-    # Plot daily income vs. spending
-    plot_bar_monthly_income_vs_spending(all_transactions, graph_title="Total Monthly Income vs. Spending", limit=1000)
-    plot_bar_monthly_income_vs_spending(checking_transactions, graph_title="Checking Monthly Income vs. Spending", limit=1000)
-    plot_bar_monthly_income_vs_spending(savings_transactions, graph_title="Savings Monthly Income vs. Spending", limit=1000)
-    plot_bar_monthly_income_vs_spending(credit_transactions, graph_title="Credit Monthly Income vs. Spending", limit=284)
+    # # Plot daily income vs. spending
+    # plot_bar_monthly_income_vs_spending(all_transactions, graph_title="Total Monthly Income vs. Spending", limit=1000)
+    # plot_bar_monthly_income_vs_spending(checking_transactions, graph_title="Checking Monthly Income vs. Spending", limit=1000)
+    # plot_bar_monthly_income_vs_spending(savings_transactions, graph_title="Savings Monthly Income vs. Spending", limit=1000)
+    # plot_bar_monthly_income_vs_spending(credit_transactions, graph_title="Credit Monthly Income vs. Spending", limit=284)
 
 
     # Parse and plot Fidelity investment statements
     fidelity_summaries, fidelity_holdings = aggregate_fidelity_files('/home/malsenan/Documents/finances/fidelity')
     save_to_csv(fidelity_summaries, '/home/malsenan/Documents/finances/parsed_data/fidelitySummaries.csv')
     save_to_csv(fidelity_holdings, '/home/malsenan/Documents/finances/parsed_data/fidelityHoldings.csv')
-    plot_line_fidelity_portfolio(fidelity_summaries)
-    plot_line_fidelity_per_account(fidelity_summaries)
-    plot_line_fidelity_holdings(fidelity_holdings)
+    # plot_line_fidelity_portfolio(fidelity_summaries)
+    # plot_line_fidelity_per_account(fidelity_summaries)
+    # plot_line_fidelity_holdings(fidelity_holdings)
     

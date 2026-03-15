@@ -2,11 +2,11 @@ from datetime import datetime
 from collections import defaultdict
 from typing import List
 
-from models import Transaction
+from models import BankTransaction
 
 
 def log_account_stats_between(
-    transactions: List[Transaction],
+    transactions: List[BankTransaction],
     start_month: int,
     start_year: int,
     end_month: int,
@@ -49,9 +49,9 @@ def log_account_stats_between(
     return lines
 
 
-def log_last_x_transactions(checking_transactions: List[Transaction],
-                            savings_transactions: List[Transaction],
-                            credit_transactions: List[Transaction],
+def log_last_x_transactions(checking_transactions: List[BankTransaction],
+                            savings_transactions: List[BankTransaction],
+                            credit_transactions: List[BankTransaction],
                             num_transactions: int) -> List[str]:
     """
     Returns the last N transactions across all three accounts, displayed side-by-side sorted by date.
@@ -120,9 +120,9 @@ def log_last_x_transactions(checking_transactions: List[Transaction],
     return lines
 
 
-def log_transactions_since(checking_transactions: List[Transaction],
-                            savings_transactions: List[Transaction],
-                            credit_transactions: List[Transaction],
+def log_transactions_since(checking_transactions: List[BankTransaction],
+                            savings_transactions: List[BankTransaction],
+                            credit_transactions: List[BankTransaction],
                             month: int,
                             year: int) -> List[str]:
     """
@@ -202,7 +202,7 @@ def log_transactions_since(checking_transactions: List[Transaction],
     return lines
 
 
-def log_top_aggregate_transactions(transactions: List[Transaction], num_transactions: int) -> List[str]:
+def log_top_aggregate_transactions(transactions: List[BankTransaction], num_transactions: int) -> List[str]:
     """
     Groups transactions by (description, amount) and returns the top N most frequent ones.
 

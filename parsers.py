@@ -3,9 +3,9 @@ import csv
 from typing import List, Dict, Tuple
 from datetime import datetime
 
-from models import Transaction
+from models import BankTransaction
 
-def parse_checking_or_savings_file(file_path: str) -> Tuple[List[Dict[str, object]], List[Transaction]]:
+def parse_checking_or_savings_file(file_path: str) -> Tuple[List[Dict[str, object]], List[BankTransaction]]:
     """
     Parses a checking or savings transactions CSV file and returns the processed data.
 
@@ -13,7 +13,7 @@ def parse_checking_or_savings_file(file_path: str) -> Tuple[List[Dict[str, objec
       Row 0:   Account summary header
       Rows 1-4: Account summary entries (beginning balance, deposits, etc.)
       Row 5:   Blank
-      Row 6:   Transaction header
+      Row 6:   BankTransaction header
       Rows 7+: Individual transactions (oldest to newest in file)
 
     Parameters:
@@ -44,14 +44,14 @@ def parse_checking_or_savings_file(file_path: str) -> Tuple[List[Dict[str, objec
     reader = csv.DictReader(lines[7:], fieldnames=next(csv.reader([lines[6]])))
     transactions = [
         {
+            "date": transaction["Date"],
             "account": "savings" if file_path.lower().count("savings") > 0 else "checking",
-            "date": row["Date"],
-            "description": row["Description"],
+            "description": transaction["Description"],
             # Amount may be blank for certain rows; default to 0 to avoid conversion errors
-            "amount": round(float(row["Amount"].replace(",", "")) if row["Amount"] else 0, 2),
-            "balance": round(float(row["Running Bal."].replace(',', '')), 2),
+            "amount": round(float(transaction["Amount"].replace(",", "")) if transaction["Amount"] else 0, 2),
+            "balance": round(float(transaction["Running Bal."].replace(',', '')), 2),
         }
-        for row in reader
+        for transaction in reader
     ]
 
     # BofA exports oldest-first; reverse so callers receive newest-first
@@ -59,7 +59,7 @@ def parse_checking_or_savings_file(file_path: str) -> Tuple[List[Dict[str, objec
 
     return account_summary, transactions
 
-def parse_credit_file(file_path: str) -> List[Transaction]:
+def parse_credit_file(file_path: str) -> List[BankTransaction]:
     """
     Parses a single credit transactions CSV file and returns the processed data.
 
@@ -73,19 +73,19 @@ def parse_credit_file(file_path: str) -> List[Transaction]:
     """
     with open(file_path, mode="r", newline="") as file:
         reader = csv.DictReader(file)
-        transactions = []
-        for row in reader:
-            transaction = {
+        transactions = [
+            {
+                "date": transaction["Posted Date"],
                 "account": "credit",
-                "date": row["Posted Date"],
-                "description": row["Payee"],
-                "amount": round(float(row["Amount"]), 2),
+                "description": transaction["Payee"],
+                "amount": round(float(transaction["Amount"]), 2),
             }
-            transactions.append(transaction)
+            for transaction in reader
+        ]
 
     return transactions
 
-def aggregate_credit_files(directory: str) -> List[Transaction]:
+def aggregate_credit_files(directory: str) -> List[BankTransaction]:
     """
     Aggregates data from all credit CSV files in a specified directory.
 
@@ -152,22 +152,22 @@ def parse_fidelity_file(file_path: str) -> Tuple[List[Dict], List[Dict]]:
     with open(file_path, newline="") as f:
         lines = f.readlines()
 
-    def safe_float(v):
+    def safe_float(v: str):
         """Convert a possibly-empty, possibly-comma-formatted string to float, or None."""
-        return round(float(v.replace(",", "")), 2) if v and v.strip() else None
+        return round(float(v.replace(",", "")), 2) if v and v.strip() and v.strip().replace('.','').isnumeric() else 0
 
     # --- Account summaries (rows 1-2, using row 0 as the header) ---
     summary_fieldnames = next(csv.reader([lines[0]]))
     reader = csv.DictReader(lines[1:3], fieldnames=summary_fieldnames)
     account_summaries = []
-    # Track account types in the order they appear so we can match them to holdings blocks below
-    account_type_order = []
+
+    # Map account number to map account type to later grab account types for transactions 
+    account_number_to_type_map = {}
     for row in reader:
-        account_type = row["Account Type"].strip()
-        account_type_order.append(account_type)
+        account_number_to_type_map[row["Account"]] = row["Account Type"]
         account_summaries.append({
             "date": date,
-            "account_type": account_type,
+            "account_type": row["Account Type"].strip(),
             "beginning_mkt_value": safe_float(row["Beginning mkt Value"]),
             "change_in_investment": safe_float(row["Change in Investment"]),
             "ending_mkt_value": safe_float(row["Ending mkt Value"]),
@@ -178,54 +178,73 @@ def parse_fidelity_file(file_path: str) -> Tuple[List[Dict], List[Dict]]:
         })
 
     # --- Holdings section (rows 7+, 0-indexed) ---
-    # Asset-class category labels that appear as section dividers; we skip these rows entirely
-    known_categories = {"Mutual Funds", "ETFs", "Stocks", "Bonds", "Cash", "Options", "CDs"}
     holdings = []
     # Tracks which account block we're currently inside (-1 = before first account row)
-    current_account_idx = -1
+    # current_account_idx = -1
 
-    for line in lines[7:]:
-        row = next(csv.reader([line]))
-        # Ensure at least 7 columns so index access below is always safe
-        while len(row) < 7:
-            row.append("")
-        non_empty = [c for c in row if c.strip()]
-        if not non_empty:
-            continue  # blank line
-        first = row[0].strip()
-        if not first:
-            continue  # row with empty first cell (can happen with trailing commas)
-        if first.startswith("Subtotal"):
-            continue  # subtotal summary rows, e.g. "Subtotal of Mutual Funds"
-        if first in known_categories:
-            continue  # category header rows, e.g. "Mutual Funds"
-
-        # Account number row: only the first cell is non-empty (the account number string)
-        # Each such row starts a new account block; we map it to the next account_type in order
-        if len(non_empty) == 1:
-            current_account_idx += 1
-            continue
-
-        # Everything else with data in multiple columns is an actual fund/security row
-        if current_account_idx < 0 or current_account_idx >= len(account_type_order):
-            continue  # guard: skip any data rows that appear before the first account marker
-
-        ending_value = safe_float(row[5])
-        cost_basis = safe_float(row[6])
-        # Unrealized gain/loss = current market value minus what was paid for the shares
-        unrealized = round(ending_value - cost_basis, 2) if ending_value is not None and cost_basis is not None else None
+    line_num = 10 
+    holdings_fieldnames = next(csv.reader([lines[5]]))
+    while line_num < len(lines):
+        # reader = dict(Symbol/CUSIP,Description,Quantity,Price,Beginning Value,Ending Value,Cost Basis)
+        transaction = next(csv.DictReader([lines[line_num]], fieldnames=holdings_fieldnames))
         holdings.append({
             "date": date,
-            "account_type": account_type_order[current_account_idx],
-            "symbol": first,
-            "description": row[1].strip(),
-            "quantity": safe_float(row[2]),
-            "price": safe_float(row[3]),
-            "beginning_value": safe_float(row[4]),
-            "ending_value": ending_value,
-            "cost_basis": cost_basis,
-            "unrealized_gain_loss": unrealized,
+            "account_type": account_number_to_type_map[lines[line_num - 2].strip()],
+            "symbol": transaction["Symbol/CUSIP"],
+            "description": transaction["Description"],
+            "quantity": safe_float(transaction["Quantity"]),
+            "price": safe_float(transaction["Price"]),
+            "beginning_value": safe_float(transaction["Beginning Value"]),
+            "ending_value": transaction["Ending Value"],
+            "cost_basis": transaction["Cost Basis"],
+            # Unrealized gain/loss = current market value minus what was paid for the shares
+            # unrealized = round(ending_value - cost_basis, 2) if ending_value is not None and cost_basis is not None else None
         })
+        line_num += 5
+        # parsed_lines.append(csv.DictReader(f"{account_number_to_type_map[lines[line_num - 2]]}," + lines[line_num], filednames=['AccountType'] + lines[5]))
+
+    # for line in lines[7:]:
+    #     row = next(csv.reader([line]))
+    #     # Ensure at least 7 columns so index access below is always safe
+    #     while len(row) < 7:
+    #         row.append("")
+    #     non_empty = [c for c in row if c.strip()]
+    #     if not non_empty:
+    #         continue  # blank line
+    #     first = row[0].strip()
+    #     if not first:
+    #         continue  # row with empty first cell (can happen with trailing commas)
+    #     if first.startswith("Subtotal"):
+    #         continue  # subtotal summary rows, e.g. "Subtotal of Mutual Funds"
+    #     if first in known_categories:
+    #         continue  # category header rows, e.g. "Mutual Funds"
+
+    #     # Account number row: only the first cell is non-empty (the account number string)
+    #     # Each such row starts a new account block; we map it to the next account_type in order
+    #     if len(non_empty) == 1:
+    #         current_account_idx += 1
+    #         continue
+
+    #     # Everything else with data in multiple columns is an actual fund/security row
+    #     if current_account_idx < 0 or current_account_idx >= len(account_type_order):
+    #         continue  # guard: skip any data rows that appear before the first account marker
+
+    #     ending_value = safe_float(row[5])
+    #     cost_basis = safe_float(row[6])
+    #     # Unrealized gain/loss = current market value minus what was paid for the shares
+    #     unrealized = round(ending_value - cost_basis, 2) if ending_value is not None and cost_basis is not None else None
+    #     holdings.append({
+    #         "date": date,
+    #         "account_type": account_type_order[current_account_idx],
+    #         "symbol": first,
+    #         "description": row[1].strip(),
+    #         "quantity": safe_float(row[2]),
+    #         "price": safe_float(row[3]),
+    #         "beginning_value": safe_float(row[4]),
+    #         "ending_value": ending_value,
+    #         "cost_basis": cost_basis,
+    #         "unrealized_gain_loss": unrealized,
+    #     })
 
     return account_summaries, holdings
 
@@ -250,6 +269,6 @@ def aggregate_fidelity_files(directory: str) -> Tuple[List[Dict], List[Dict]]:
             summaries, holdings = parse_fidelity_file(file_path)
             all_summaries.extend(summaries)
             all_holdings.extend(holdings)
-    all_summaries.sort(key=lambda x: datetime.strptime(x["date"], "%m/%d/%Y"))
-    all_holdings.sort(key=lambda x: datetime.strptime(x["date"], "%m/%d/%Y"))
+    all_summaries.sort(key=lambda x: datetime.strptime(x["date"], "%m/%d/%Y"), reverse=True)
+    all_holdings.sort(key=lambda x: datetime.strptime(x["date"], "%m/%d/%Y"), reverse=True)
     return all_summaries, all_holdings

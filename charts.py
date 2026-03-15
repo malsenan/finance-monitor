@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from typing import List
 
-from models import Transaction
+from models import BankTransaction
 
 def _annotate_points(ax, dates, values, indices):
     """
@@ -28,7 +28,7 @@ def _annotate_points(ax, dates, values, indices):
         )
 
 
-def plot_line_monthly_balance(transactions: List[Transaction], graph_title: str):
+def plot_line_monthly_balance(transactions: List[BankTransaction], graph_title: str):
     """
     Plots a numeric field from a list of transactions over time as a line graph.
 
@@ -77,7 +77,7 @@ def plot_line_monthly_balance(transactions: List[Transaction], graph_title: str)
     plt.tight_layout()
     plt.show()
 
-def plot_bar_monthly_income_vs_spending(transactions: List[Transaction], graph_title: str, limit: float = None):
+def plot_bar_monthly_income_vs_spending(transactions: List[BankTransaction], graph_title: str, limit: float = None):
     """
     Plots total monthly income and spending as grouped bars per month.
 
