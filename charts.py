@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from typing import List
 
-from models import BankTransaction
+from models import BankTransaction, FidelityTransaction
 
 def _annotate_points(ax, dates, values, indices):
     """
@@ -28,52 +28,45 @@ def _annotate_points(ax, dates, values, indices):
         )
 
 
-def plot_line_monthly_balance(transactions: List[BankTransaction], graph_title: str):
+def plot_line_monthly_balance(series: list, graph_title: str):
     """
-    Plots a numeric field from a list of transactions over time as a line graph.
-
-    Annotates ~7 evenly-spaced points (plus the last point) with their value and date.
+    Plots one or more transaction series over time as a line graph.
 
     Parameters:
-    - transactions: List of transaction dicts, each containing a 'date' and the target key.
-    - transaction_key: The field name to plot on the y-axis (e.g. 'balance', 'net_worth').
+    - series: Either a single list of transaction dicts, or a list of
+              (transactions, label) tuples to plot multiple labeled lines.
     - graph_title: Title displayed on the chart.
     """
-
-    
-
-    # Convert date strings to datetime objects for proper x-axis spacing
-    dates = [] # x-axis: time
-    balances = [] #y-axis: money
-
-    curr_balances = {} # Balance(s): {'checking': 0, 'savings': 0, 'credit': 0} or just {'checking': 0}
-    curr_date = None # Sum transactions up day by day
-    for t in transactions[::-1]: # Go oldest -> newest
-        # If it's a new day, add the previous date and cumulative balances
-        if (curr_date is not None and t['date'] != curr_date): 
-            balances.append(round(sum(curr_balances.values()), 2))
-            dates.append(datetime.strptime(curr_date, "%m/%d/%Y"))
-        curr_date = t['date'] # Update date
-        curr_balances[t['account']] = t['balance'] # Update balance
-    
-    # Append the final day's balance after the loop
-    balances.append(round(sum(curr_balances.values()), 2))
-    dates.append(datetime.strptime(curr_date, "%m/%d/%Y"))
+    # Normalize: if passed a plain list of dicts, wrap it as a single unlabeled series
+    if series and not isinstance(series[0], tuple):
+        series = [(series, None)]
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(dates, balances)
 
-    # Annotate ~7 evenly spaced points so the chart isn't cluttered but still readable
-    # Don't put a point so close to the last one
-    _annotate_points(ax, dates, balances, [i for i in range(len(dates)) if (i % (len(dates) // 16) == 0 and i < len(dates) * 0.95) or i == len(dates) - 1])
+    for transactions, label in series:
+        dates = []
+        balances = []
+        curr_balances = {}
+        curr_date = None
+        for t in transactions[::-1]:
+            if curr_date is not None and t['date'] != curr_date:
+                balances.append(round(sum(curr_balances.values()), 2))
+                dates.append(datetime.strptime(curr_date, "%m/%d/%Y"))
+            curr_date = t['date']
+            curr_balances[t['account']] = t['balance']
+        balances.append(round(sum(curr_balances.values()), 2))
+        dates.append(datetime.strptime(curr_date, "%m/%d/%Y"))
+
+        ax.plot(dates, balances, label=label)
+        _annotate_points(ax, dates, balances, [i for i in range(len(dates)) if (i % (len(dates) // 16) == 0 and i < len(dates) * 0.95) or i == len(dates) - 1])
+
+    if any(label for _, label in series):
+        ax.legend()
 
     ax.set_title(graph_title.capitalize())
     ax.set_xlabel("Date")
     ax.set_ylabel("Balance ($)")
-
-    # Rotate x-axis date labels so they don't overlap
     fig.autofmt_xdate()
-
     plt.tight_layout()
     plt.show()
 
@@ -131,6 +124,53 @@ def plot_bar_monthly_income_vs_spending(transactions: List[BankTransaction], gra
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=45, ha='right')
     ax.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+def plot_line_fidelity_portfolio(transactions: List[FidelityTransaction], graph_title: str):
+    """
+    Plots a numeric field from a list of transactions over time as a line graph.
+
+    Annotates ~7 evenly-spaced points (plus the last point) with their value and date.
+
+    Parameters:
+    - transactions: List of transaction dicts, each containing a 'date' and the target key.
+    - transaction_key: The field name to plot on the y-axis (e.g. 'balance', 'net_worth').
+    - graph_title: Title displayed on the chart.
+    """
+
+    # Convert date strings to datetime objects for proper x-axis spacing
+    dates = [] # x-axis: time
+    balances = [] #y-axis: money
+
+    curr_balances = {} # Balance(s): {'checking': 0, 'savings': 0, 'credit': 0} or just {'checking': 0}
+    curr_date = None # Sum transactions up day by day
+    for t in transactions[::-1]: # Go oldest -> newest
+        # If it's a new day, add the previous date and cumulative balances
+        if (curr_date is not None and t['date'] != curr_date): 
+            balances.append(round(sum(curr_balances.values()), 2))
+            dates.append(datetime.strptime(curr_date, "%m/%d/%Y"))
+        curr_date = t['date'] # Update date
+        curr_balances[t['account']] = t['balance'] # Update balance
+    
+    # Append the final day's balance after the loop
+    balances.append(round(sum(curr_balances.values()), 2))
+    dates.append(datetime.strptime(curr_date, "%m/%d/%Y"))
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(dates, balances)
+
+    # Annotate ~7 evenly spaced points so the chart isn't cluttered but still readable
+    # Don't put a point so close to the last one
+    _annotate_points(ax, dates, balances, [i for i in range(len(dates)) if (i % (len(dates) // 16) == 0 and i < len(dates) * 0.95) or i == len(dates) - 1])
+
+    ax.set_title(graph_title.capitalize())
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Balance ($)")
+
+    # Rotate x-axis date labels so they don't overlap
+    fig.autofmt_xdate()
 
     plt.tight_layout()
     plt.show()
