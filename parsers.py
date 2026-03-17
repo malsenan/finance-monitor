@@ -122,7 +122,42 @@ def aggregate_credit_files(directory: str) -> List[BankTransaction]:
 
     return transactions
 
-def parse_fidelity_file(file_path: str) -> Tuple[List[Dict], List[FidelityTransaction]]:
+def parse_fidelity_transactions(file_path: str) -> List[FidelityTransaction]:
+    """
+    Parses a single fidelity transactions CSV file and returns the processed data.
+
+    Fidelity transactions CSV has a standard header row followed by one transaction per row.
+
+    Parameters:
+    - file_path (str): The path to the fidelity CSV file.
+
+    Returns:
+    - List[Dict[str, object]]: A list of transaction dicts newest to oldest.
+    """
+    with open(file_path, mode="r", newline="") as file:
+        reader = csv.DictReader(file)
+        actions, symbols, descriptions, types = set(), set(), set(), set()
+        for transaction in reader:
+            actions.add(transaction['Action'])
+            symbols.add(transaction['Symbol'])
+            descriptions.add(transaction['Description'])
+            types.add(transaction['Type'])
+
+    transactions = [
+        {
+            "date": transaction["Run Date"],
+            "account": transaction["Account"],
+            "symbol": transaction["Symbol"],
+            "action": transaction["Action"],
+            "description": transaction["Description"],
+            
+        }
+        for transaction in reader
+    ]
+
+    return transactions
+
+def parse_fidelity_statement(file_path: str, exclude_cash: bool = False) -> Tuple[List[Dict], List[FidelityTransaction]]:
     """
     Parses a Fidelity investment statement CSV file.
 
@@ -164,6 +199,11 @@ def parse_fidelity_file(file_path: str) -> Tuple[List[Dict], List[FidelityTransa
     # Map account number to map account type to later grab account types for transactions 
     account_number_to_type_map = {}
     for row in reader:
+        '''
+        for each transaction (oldest → newest):
+            update share count for that symbol in that account
+            balance = sum of (quantity × price) for all symbols in that account
+        '''
         account_number_to_type_map[row["Account"]] = row["Account Type"]
         account_summaries.append({
             "date": date,
@@ -185,25 +225,26 @@ def parse_fidelity_file(file_path: str) -> Tuple[List[Dict], List[FidelityTransa
     while line_num < len(lines):
         # reader = dict(Symbol/CUSIP,Description,Quantity,Price,Beginning Value,Ending Value,Cost Basis)
         transaction = next(csv.DictReader([lines[line_num]], fieldnames=holdings_fieldnames))
-        holdings.append({
-            "date": date,
-            "account": account_number_to_type_map[lines[line_num - 2].strip()],
-            "symbol": transaction["Symbol/CUSIP"],
-            "description": transaction["Description"],
-            "quantity": safe_float(transaction["Quantity"]),
-            "price": safe_float(transaction["Price"]),
-            "beginning_value": safe_float(transaction["Beginning Value"]),
-            "ending_value": safe_float(transaction["Ending Value"]),
-            "cost_basis": safe_float(transaction["Cost Basis"]),
-            # Unrealized gain/loss = current market value minus what was paid for the shares
-            # unrealized = round(ending_value - cost_basis, 2) if ending_value is not None and cost_basis is not None else None
-        })
+        if not exclude_cash or (exclude_cash and transaction["Symbol/CUSIP"] != "SPAXX"):
+            holdings.append({
+                "date": date,
+                "account": account_number_to_type_map[lines[line_num - 2].strip()],
+                "symbol": transaction["Symbol/CUSIP"],
+                "description": transaction["Description"],
+                "quantity": safe_float(transaction["Quantity"]),
+                "price": safe_float(transaction["Price"]),
+                "beginning_value": safe_float(transaction["Beginning Value"]),
+                "ending_value": safe_float(transaction["Ending Value"]),
+                "cost_basis": safe_float(transaction["Cost Basis"]),
+                # Unrealized gain/loss = current market value minus what was paid for the shares
+                # unrealized = round(ending_value - cost_basis, 2) if ending_value is not None and cost_basis is not None else None
+            })
         line_num += 5
 
     return account_summaries, holdings
 
 
-def aggregate_fidelity_files(directory: str) -> Tuple[List[Dict], List[Dict]]:
+def aggregate_fidelity_statements(directory: str) -> Tuple[List[Dict], List[Dict]]:
     """
     Aggregates data from all Fidelity statement CSVs in a directory.
 
@@ -220,7 +261,7 @@ def aggregate_fidelity_files(directory: str) -> Tuple[List[Dict], List[Dict]]:
     for filename in os.listdir(directory):
         if filename.startswith("Statement") and filename.endswith(".csv"):
             file_path = os.path.join(directory, filename)
-            summaries, holdings = parse_fidelity_file(file_path)
+            summaries, holdings = parse_fidelity_statement(file_path)
             all_summaries.extend(summaries)
             all_holdings.extend(holdings)
     all_summaries.sort(key=lambda x: datetime.strptime(x["date"], "%m/%d/%Y"), reverse=True)
