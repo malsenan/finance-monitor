@@ -58,7 +58,7 @@ def plot_line_monthly_balance(series: list, graph_title: str):
         dates.append(datetime.strptime(curr_date, "%m/%d/%Y"))
 
         ax.plot(dates, balances, label=label)
-        _annotate_points(ax, dates, balances, [i for i in range(len(dates)) if (i % (len(dates) // 16) == 0 and i < len(dates) * 0.95) or i == len(dates) - 1])
+        _annotate_points(ax, dates, balances, [i for i in range(len(dates)) if (i % (len(dates) // 7) == 0 and i < len(dates) * 0.95) or i == len(dates) - 1])
 
     if any(label for _, label in series):
         ax.legend()
@@ -186,21 +186,38 @@ def plot_line_fidelity_portfolio(summaries: list):
     Parameters:
     - summaries: List of account summary dicts from parse_fidelity_file / aggregate_fidelity_files.
     """
-    from collections import defaultdict
+     # Convert date strings to datetime objects for proper x-axis spacing
+    dates = [] # x-axis: time
+    balances = [] #y-axis: money
 
-    # Sum both accounts' ending market value for each date to get total portfolio value
-    by_date = defaultdict(float)
-    for s in summaries:
-        if s["ending_mkt_value"] is not None:
-            by_date[s["date"]] += s["ending_mkt_value"]
+    curr_balances = {} # Balance(s): {'ROTH IRA': 0, 'Individual': 0, 'ADVANTEST': 0} or just {'checking': 0}
+    curr_date = None # Sum transactions up day by day
+    for t in summaries[::-1]: # Go oldest -> newest
+        # If it's a new day, add the previous date and cumulative balances
+        if (curr_date is not None and t['date'] != curr_date): 
+            balances.append(round(sum(curr_balances.values()), 2))
+            dates.append(datetime.strptime(curr_date, "%m/%d/%Y"))
+        curr_date = t['date'] # Update date
+        curr_balances[t['account']] = t['ending_mkt_value'] # Update balance
+    
+    # Append the final day's balance after the loop
+    balances.append(round(sum(curr_balances.values()), 2))
+    dates.append(datetime.strptime(curr_date, "%m/%d/%Y"))
+    # from collections import defaultdict
 
-    sorted_items = sorted(by_date.items(), key=lambda x: datetime.strptime(x[0], "%m/%d/%Y"))
-    dates = [datetime.strptime(k, "%m/%d/%Y") for k, _ in sorted_items]
-    values = [v for _, v in sorted_items]
+    # # Sum both accounts' ending market value for each date to get total portfolio value
+    # by_date = defaultdict(float)
+    # for s in summaries:
+    #     if s["ending_mkt_value"] is not None:
+    #         by_date[s["date"]] += s["ending_mkt_value"]
+
+    # sorted_items = sorted(by_date.items(), key=lambda x: datetime.strptime(x[0], "%m/%d/%Y"))
+    # dates = [datetime.strptime(k, "%m/%d/%Y") for k, _ in sorted_items]
+    # values = [v for _, v in sorted_items]
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(dates, values)
-    _annotate_points(ax, dates, values, [i for i in range(len(dates)) if i % max(1, len(dates) // 7) == 0 or i == len(dates) - 1])
+    ax.plot(dates, balances)
+    _annotate_points(ax, dates, balances, [i for i in range(len(dates)) if i % max(1, len(dates) // 7) == 0 or i == len(dates) - 1])
     ax.set_title("Total Portfolio Value Over Time")
     ax.set_xlabel("Date")
     ax.set_ylabel("Value ($)")
@@ -244,7 +261,7 @@ def plot_line_fidelity_per_account(summaries: list):
     plt.show()
 
 
-def plot_line_fidelity_holdings(holdings: list):
+def plot_line_fidelity_individual_holdings(holdings: list):
     """
     Plots market value and cost basis over time for each held security.
 

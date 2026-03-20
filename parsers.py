@@ -126,7 +126,7 @@ def aggregate_credit_files(directory: str) -> List[BankTransaction]:
 
     return transactions
 
-def parse_fidelity_401k(file_path: str) -> List[FidelityTransaction]:
+def parse_fidelity_401k(file_path: str) -> Tuple[List[Dict], List[FidelityTransaction]]:
     """
     Parses a single fidelity transactions CSV file and returns the processed data.
 
@@ -141,6 +141,7 @@ def parse_fidelity_401k(file_path: str) -> List[FidelityTransaction]:
     with open(file_path, mode="r", newline="") as file:
         reader = list(csv.DictReader(file))
         transactions = []
+        summaries = []
         stocks = {}
         for transaction in reversed(reader):
             if transaction['Account'].startswith("ADVANTEST") and transaction['Action'] == "Contributions":
@@ -173,8 +174,27 @@ def parse_fidelity_401k(file_path: str) -> List[FidelityTransaction]:
                     }
                 )
 
+                summaries.append(
+                    {
+                        "date": transaction['Run Date'],
+                        "account": transaction['Account'] + " - " + transaction['Description'],
+                        "beginning_mkt_value": round(stocks[transaction['Description']]["beginning_value"], 2),
+                        "change_in_investment": round(
+                            round(stocks[transaction['Description']]["ending_value"] 
+                                  - stocks[transaction['Description']]["beginning_value"]
+                                    - safe_float(transaction['Amount ($)']), 2)
+                        ),
+                        "ending_mkt_value": round(stocks[transaction['Description']]["ending_value"], 2),
+                        "dividends_period": 0,
+                        "dividends_ytd": 0,
+                        "total_period": 0,
+                        "total_ytd": 0
+                    }
+                )
+
         transactions.reverse()
-        return transactions
+        summaries.reverse()
+        return summaries, transactions
 
 def parse_fidelity_statement(file_path: str, exclude_cash: bool = False) -> Tuple[List[Dict], List[FidelityTransaction]]:
     """

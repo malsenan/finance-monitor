@@ -15,7 +15,7 @@ from charts import (
     plot_bar_monthly_income_vs_spending,
     plot_line_fidelity_portfolio, 
     plot_line_fidelity_per_account, 
-    plot_line_fidelity_holdings
+    plot_line_fidelity_individual_holdings
 )
 from validator import validate_balance
 
@@ -29,16 +29,24 @@ if __name__ == "__main__":
     savings_summary, savings_transactions = parse_checking_or_savings_file("/home/malsenan/Documents/finances/bofa/savings/savingsTransactions.csv")
 
     # Parse Fidelity 401k transactions
-    fidelity_401k_transactions = parse_fidelity_401k("/home/malsenan/Documents/finances/fidelity/fidelityTransactions.csv")
+    fidelity_401k_summaries, fidelity_401k_transactions = parse_fidelity_401k("/home/malsenan/Documents/finances/fidelity/fidelityTransactions.csv")
 
     # Parse Fidelity investment statements
-    fidelity_summaries, fidelity_holdings = aggregate_fidelity_statements('/home/malsenan/Documents/finances/fidelity')
+    fidelity_individual_summaries, fidelity_individual_holdings = aggregate_fidelity_statements('/home/malsenan/Documents/finances/fidelity')
 
     # Aggregate 401k and individual fidelity data
+    all_fidelity_summaries = list(
+        heapq.merge(
+            fidelity_401k_summaries,
+            fidelity_individual_summaries,
+            key=lambda t: datetime.strptime(t["date"], "%m/%d/%Y"),
+            reverse=True
+        )
+    )
     all_fidelity_transactions = list(
         heapq.merge(
             fidelity_401k_transactions,
-            fidelity_holdings,
+            fidelity_individual_holdings,
             key=lambda t: datetime.strptime(t["date"], "%m/%d/%Y"),
             reverse=True
         )
@@ -94,8 +102,8 @@ if __name__ == "__main__":
     save_to_csv(credit_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedCreditTransactions.csv')
     save_to_csv(checking_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedCheckingTransactions.csv')
     save_to_csv(savings_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedSavingsTransactions.csv')
-    save_to_csv(fidelity_summaries, '/home/malsenan/Documents/finances/parsed_data/fidelitySummaries.csv')
-    save_to_csv(fidelity_holdings, '/home/malsenan/Documents/finances/parsed_data/parsedFidelityHoldings.csv')
+    save_to_csv(all_fidelity_summaries, '/home/malsenan/Documents/finances/parsed_data/parsedFidelitySummaries.csv')
+    save_to_csv(fidelity_individual_holdings, '/home/malsenan/Documents/finances/parsed_data/parsedFidelityHoldings.csv')
     save_to_csv(fidelity_401k_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedFidelity401k.csv')
     
     curr_balances = {}
@@ -138,11 +146,11 @@ if __name__ == "__main__":
     # Plot net worth over time (checking + savings - credit)
     plot_line_monthly_balance(all_transactions, graph_title='net worth over time')
 
-    '''
+    
     plot_line_monthly_balance(checking_transactions, graph_title='checking balance')
     plot_line_monthly_balance(savings_transactions, graph_title='savings balance')
     plot_line_monthly_balance(credit_transactions, graph_title='credit balance')
-    '''
+    
 
     # Plot balance over time on checking, savings, and credit accounts (one chart)
     plot_line_monthly_balance([
@@ -150,19 +158,20 @@ if __name__ == "__main__":
         (checking_transactions, "checking"),
         (savings_transactions, "savings"),
         (credit_transactions, "credit"),
+        (fidelity_statements, "fidelity"),  
     ], graph_title="account balances over time")
 
     plot_line_monthly_balance([(fidelity_statements, "sum of accounts"), (cost_bases, "money invested")], graph_title="fidelity balances over time")
 
-    # # Plot daily income vs. spending
+    # Plot daily income vs. spending
     plot_bar_monthly_income_vs_spending(all_transactions, graph_title="Total Monthly Income vs. Spending", limit=1000)
-    # plot_bar_monthly_income_vs_spending(checking_transactions, graph_title="Checking Monthly Income vs. Spending", limit=1000)
-    # plot_bar_monthly_income_vs_spending(savings_transactions, graph_title="Savings Monthly Income vs. Spending", limit=1000)
-    # plot_bar_monthly_income_vs_spending(credit_transactions, graph_title="Credit Monthly Income vs. Spending", limit=284)
+    plot_bar_monthly_income_vs_spending(checking_transactions, graph_title="Checking Monthly Income vs. Spending", limit=1000)
+    plot_bar_monthly_income_vs_spending(savings_transactions, graph_title="Savings Monthly Income vs. Spending", limit=1000)
+    plot_bar_monthly_income_vs_spending(credit_transactions, graph_title="Credit Monthly Income vs. Spending", limit=284)
 
 
-    # Plot Fidelity investment statements
-    # plot_line_fidelity_portfolio(fidelity_summaries)
-    # plot_line_fidelity_per_account(fidelity_summaries)
-    # plot_line_fidelity_holdings(fidelity_holdings)
+    # Plot Fidelity data
+    plot_line_fidelity_portfolio(all_fidelity_summaries)
+    plot_line_fidelity_per_account(all_fidelity_summaries)
+    plot_line_fidelity_individual_holdings(fidelity_individual_holdings)
     
