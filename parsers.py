@@ -5,6 +5,10 @@ from datetime import datetime
 
 from models import BankTransaction, FidelityTransaction
 
+def safe_float(v: str):
+    """Convert a possibly-empty, possibly-comma-formatted string to float, or None."""
+    return round(float(v.replace(",", "")), 2) if v and v.strip() and v.strip().replace('.','').isnumeric() else 0
+
 def parse_checking_or_savings_file(file_path: str) -> Tuple[List[Dict[str, object]], List[BankTransaction]]:
     """
     Parses a checking or savings transactions CSV file and returns the processed data.
@@ -122,7 +126,7 @@ def aggregate_credit_files(directory: str) -> List[BankTransaction]:
 
     return transactions
 
-def parse_fidelity_transactions(file_path: str) -> List[FidelityTransaction]:
+def parse_fidelity_401k(file_path: str) -> List[FidelityTransaction]:
     """
     Parses a single fidelity transactions CSV file and returns the processed data.
 
@@ -135,27 +139,42 @@ def parse_fidelity_transactions(file_path: str) -> List[FidelityTransaction]:
     - List[Dict[str, object]]: A list of transaction dicts newest to oldest.
     """
     with open(file_path, mode="r", newline="") as file:
-        reader = csv.DictReader(file)
-        actions, symbols, descriptions, types = set(), set(), set(), set()
-        for transaction in reader:
-            actions.add(transaction['Action'])
-            symbols.add(transaction['Symbol'])
-            descriptions.add(transaction['Description'])
-            types.add(transaction['Type'])
+        reader = list(csv.DictReader(file))
+        transactions = []
+        stocks = {}
+        for transaction in reversed(reader):
+            if transaction['Account'].startswith("ADVANTEST") and transaction['Action'] == "Contributions":
+                if transaction['Description'] not in stocks:
+                    stocks[transaction['Description']] = {
+                        "quantity": safe_float(transaction['Price ($)']),
+                        "price_per_share": safe_float(transaction['Amount ($)']) / safe_float(transaction['Price ($)']),
+                        "beginning_value": 0,
+                        "ending_value": safe_float(transaction['Amount ($)']),
+                        "cost_basis": safe_float(transaction['Amount ($)']),
+                    }
+                else:
+                    stocks[transaction['Description']]['quantity'] += safe_float(transaction['Price ($)'])
+                    stocks[transaction['Description']]["price_per_share"] = safe_float(transaction['Amount ($)']) / safe_float(transaction['Price ($)'])
+                    stocks[transaction['Description']]["beginning_value"] = stocks[transaction['Description']]["ending_value"]
+                    stocks[transaction['Description']]["ending_value"] = stocks[transaction['Description']]['quantity'] * stocks[transaction['Description']]["price_per_share"]
+                    stocks[transaction['Description']]["cost_basis"] += safe_float(transaction['Amount ($)'])
+                
+                transactions.append(
+                    {
+                        "date": transaction['Run Date'],
+                        "account": transaction['Account'] + " - " + transaction['Description'],
+                        "symbol": transaction['Description'],
+                        "description": transaction['Action'],
+                        "quantity": round(stocks[transaction['Description']]['quantity'], 2),
+                        "price_per_share": round(stocks[transaction['Description']]["price_per_share"], 2),
+                        "beginning_value": round(stocks[transaction['Description']]["beginning_value"], 2),
+                        "ending_value": round(stocks[transaction['Description']]["ending_value"], 2),
+                        "cost_basis": round(stocks[transaction['Description']]["cost_basis"], 2),
+                    }
+                )
 
-    transactions = [
-        {
-            "date": transaction["Run Date"],
-            "account": transaction["Account"],
-            "symbol": transaction["Symbol"],
-            "action": transaction["Action"],
-            "description": transaction["Description"],
-            
-        }
-        for transaction in reader
-    ]
-
-    return transactions
+        transactions.reverse()
+        return transactions
 
 def parse_fidelity_statement(file_path: str, exclude_cash: bool = False) -> Tuple[List[Dict], List[FidelityTransaction]]:
     """
@@ -186,10 +205,6 @@ def parse_fidelity_statement(file_path: str, exclude_cash: bool = False) -> Tupl
 
     with open(file_path, newline="") as f:
         lines = f.readlines()
-
-    def safe_float(v: str):
-        """Convert a possibly-empty, possibly-comma-formatted string to float, or None."""
-        return round(float(v.replace(",", "")), 2) if v and v.strip() and v.strip().replace('.','').isnumeric() else 0
 
     # --- Account summaries (rows 1-2, using row 0 as the header) ---
     summary_fieldnames = next(csv.reader([lines[0]]))
@@ -232,7 +247,7 @@ def parse_fidelity_statement(file_path: str, exclude_cash: bool = False) -> Tupl
                 "symbol": transaction["Symbol/CUSIP"],
                 "description": transaction["Description"],
                 "quantity": safe_float(transaction["Quantity"]),
-                "price": safe_float(transaction["Price"]),
+                "price_per_share": safe_float(transaction["Price"]),
                 "beginning_value": safe_float(transaction["Beginning Value"]),
                 "ending_value": safe_float(transaction["Ending Value"]),
                 "cost_basis": safe_float(transaction["Cost Basis"]),
@@ -244,7 +259,7 @@ def parse_fidelity_statement(file_path: str, exclude_cash: bool = False) -> Tupl
     return account_summaries, holdings
 
 
-def aggregate_fidelity_statements(directory: str) -> Tuple[List[Dict], List[Dict]]:
+def aggregate_fidelity_statements(directory: str) -> Tuple[List[Dict], List[FidelityTransaction]]:
     """
     Aggregates data from all Fidelity statement CSVs in a directory.
 

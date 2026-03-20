@@ -2,7 +2,7 @@ import heapq
 from datetime import datetime
 from typing import List
 
-from parsers import aggregate_credit_files, parse_checking_or_savings_file, parse_fidelity_transactions, aggregate_fidelity_statements
+from parsers import aggregate_credit_files, parse_checking_or_savings_file, parse_fidelity_401k, aggregate_fidelity_statements
 from exporters import save_to_csv
 from reporters import (
     log_account_stats_between,
@@ -28,11 +28,21 @@ if __name__ == "__main__":
     checking_summary, checking_transactions = parse_checking_or_savings_file("/home/malsenan/Documents/finances/bofa/debit/checkingTransactions.csv")
     savings_summary, savings_transactions = parse_checking_or_savings_file("/home/malsenan/Documents/finances/bofa/savings/savingsTransactions.csv")
 
-    # Parse Fidelity transactions
-    fidelity_transactions = parse_fidelity_transactions("/home/malsenan/Documents/finances/fidelity/fidelityTransactions.csv")
+    # Parse Fidelity 401k transactions
+    fidelity_401k_transactions = parse_fidelity_401k("/home/malsenan/Documents/finances/fidelity/fidelityTransactions.csv")
 
     # Parse Fidelity investment statements
     fidelity_summaries, fidelity_holdings = aggregate_fidelity_statements('/home/malsenan/Documents/finances/fidelity')
+
+    # Aggregate 401k and individual fidelity data
+    all_fidelity_transactions = list(
+        heapq.merge(
+            fidelity_401k_transactions,
+            fidelity_holdings,
+            key=lambda t: datetime.strptime(t["date"], "%m/%d/%Y"),
+            reverse=True
+        )
+    )
 
     # Validate all transactions are accounted for in the running balances
     validate_balance(checking_transactions)
@@ -42,11 +52,11 @@ if __name__ == "__main__":
     # Sanitize to have fields {date, account, description, amount (curr_cost_basis - prev_cost_basis), and balance ('ending_value')}
     fidelity_statements = []
     cost_bases = []
-    for i, transaction in enumerate(fidelity_holdings[::-1]):
+    for i, transaction in enumerate(all_fidelity_transactions[::-1]):
 
         transaction_cost = transaction['cost_basis']
         # Find prev cost_basis (if exists) to subtract by and find cost of transaction
-        for prev_transaction in fidelity_holdings[len(fidelity_holdings) - i:]:
+        for prev_transaction in all_fidelity_transactions[len(all_fidelity_transactions) - i:]:
             if prev_transaction['account'] == transaction['account'] and prev_transaction['symbol'] == transaction['symbol']:
                 transaction_cost = round(transaction_cost - prev_transaction['cost_basis'], 2)
                 break
@@ -57,7 +67,7 @@ if __name__ == "__main__":
                 'account': transaction['account'],
                 'description': transaction['description'],
                 'amount': transaction_cost,
-                'balance': round(sum(t['ending_value'] for t in [holding for holding in fidelity_holdings if holding['date'] == transaction['date'] and holding['account'] == transaction['account']]), 2)
+                'balance': round(sum(t['ending_value'] for t in [holding for holding in all_fidelity_transactions if holding['date'] == transaction['date'] and holding['account'] == transaction['account']]), 2)
             }
         )
         cost_bases.insert(0, { 
@@ -65,7 +75,7 @@ if __name__ == "__main__":
             'account': transaction['account'],
             'description': transaction['description'],
             'amount': transaction_cost,
-            'balance': round(sum(t['cost_basis'] for t in [holding for holding in fidelity_holdings if holding['date'] == transaction['date'] and holding['account'] == transaction['account']]), 2)
+            'balance': round(sum(t['cost_basis'] for t in [holding for holding in all_fidelity_transactions if holding['date'] == transaction['date'] and holding['account'] == transaction['account']]), 2)
         })
 
     # Save all transactions in a single data structure
@@ -86,6 +96,7 @@ if __name__ == "__main__":
     save_to_csv(savings_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedSavingsTransactions.csv')
     save_to_csv(fidelity_summaries, '/home/malsenan/Documents/finances/parsed_data/fidelitySummaries.csv')
     save_to_csv(fidelity_holdings, '/home/malsenan/Documents/finances/parsed_data/parsedFidelityHoldings.csv')
+    save_to_csv(fidelity_401k_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedFidelity401k.csv')
     
     curr_balances = {}
     curr_date = None
