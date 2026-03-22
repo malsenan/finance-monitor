@@ -1,6 +1,7 @@
 from datetime import datetime
 from collections import defaultdict
 from typing import List
+from calendar import monthrange
 
 from models import BankTransaction
 
@@ -23,15 +24,11 @@ def log_account_stats_between(
     Returns:
     - List of formatted strings ready to be written to a report file.
     """
-    # Get spending + income by month/year
-    monthly_transactions = [
-        t
-        for t in transactions
-        if datetime.strptime(t["date"], "%m/%d/%Y").month >= start_month
-        and datetime.strptime(t["date"], "%m/%d/%Y").year >= start_year
-        and datetime.strptime(t["date"], "%m/%d/%Y").month <= end_month
-        and datetime.strptime(t["date"], "%m/%d/%Y").year <= end_year
-    ]
+    # Get spending + income by month/year by building proper datetime bounds and compare
+    start_date = datetime(start_year, start_month, 1)
+    end_date = datetime(end_year, end_month, monthrange(end_year, end_month)[1])
+    monthly_transactions = [t for t in transactions if start_date <= datetime.strptime(t["date"], "%m/%d/%Y") <= end_date]
+
     amounts = [t["amount"] for t in monthly_transactions]
     expenses = round(sum([a for a in amounts if a < 0]), 2)
     income = round(sum([a for a in amounts if a > 0]), 2)

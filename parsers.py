@@ -7,7 +7,8 @@ from models import BankTransaction, FidelityTransaction
 
 def safe_float(v: str):
     """Convert a possibly-empty, possibly-comma-formatted string to float, or None."""
-    return round(float(v.replace(",", "")), 2) if v and v.strip() and v.strip().replace('.','').isnumeric() else 0
+    s = v.strip().lstrip('-').replace('.', '')
+    return round(float(v.replace(',', '')), 2) if v and v.strip() and s.isnumeric() else 0
 
 def parse_checking_or_savings_file(file_path: str) -> Tuple[List[Dict[str, object]], List[BankTransaction]]:
     """

@@ -164,10 +164,10 @@ if __name__ == "__main__":
     plot_line_monthly_balance([(fidelity_statements, "sum of accounts"), (cost_bases, "money invested")], graph_title="fidelity balances over time")
 
     # Plot daily income vs. spending
-    plot_bar_monthly_income_vs_spending(all_transactions, graph_title="Total Monthly Income vs. Spending", limit=1000)
-    plot_bar_monthly_income_vs_spending(checking_transactions, graph_title="Checking Monthly Income vs. Spending", limit=1000)
-    plot_bar_monthly_income_vs_spending(savings_transactions, graph_title="Savings Monthly Income vs. Spending", limit=1000)
-    plot_bar_monthly_income_vs_spending(credit_transactions, graph_title="Credit Monthly Income vs. Spending", limit=284)
+    # plot_bar_monthly_income_vs_spending(all_transactions, graph_title="Total Monthly Income vs. Spending", limit=1000)
+    # plot_bar_monthly_income_vs_spending(checking_transactions, graph_title="Checking Monthly Income vs. Spending", limit=1000)
+    # plot_bar_monthly_income_vs_spending(savings_transactions, graph_title="Savings Monthly Income vs. Spending", limit=1000)
+    # plot_bar_monthly_income_vs_spending(credit_transactions, graph_title="Credit Monthly Income vs. Spending", limit=284)
 
 
     # Plot Fidelity data

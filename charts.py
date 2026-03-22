@@ -128,54 +128,6 @@ def plot_bar_monthly_income_vs_spending(transactions: List[BankTransaction], gra
     plt.tight_layout()
     plt.show()
 
-def plot_line_fidelity_portfolio(transactions: List[FidelityTransaction], graph_title: str):
-    """
-    Plots a numeric field from a list of transactions over time as a line graph.
-
-    Annotates ~7 evenly-spaced points (plus the last point) with their value and date.
-
-    Parameters:
-    - transactions: List of transaction dicts, each containing a 'date' and the target key.
-    - transaction_key: The field name to plot on the y-axis (e.g. 'balance', 'net_worth').
-    - graph_title: Title displayed on the chart.
-    """
-
-    # Convert date strings to datetime objects for proper x-axis spacing
-    dates = [] # x-axis: time
-    balances = [] #y-axis: money
-
-    curr_balances = {} # Balance(s): {'checking': 0, 'savings': 0, 'credit': 0} or just {'checking': 0}
-    curr_date = None # Sum transactions up day by day
-    for t in transactions[::-1]: # Go oldest -> newest
-        # If it's a new day, add the previous date and cumulative balances
-        if (curr_date is not None and t['date'] != curr_date): 
-            balances.append(round(sum(curr_balances.values()), 2))
-            dates.append(datetime.strptime(curr_date, "%m/%d/%Y"))
-        curr_date = t['date'] # Update date
-        curr_balances[t['account']] = t['balance'] # Update balance
-    
-    # Append the final day's balance after the loop
-    balances.append(round(sum(curr_balances.values()), 2))
-    dates.append(datetime.strptime(curr_date, "%m/%d/%Y"))
-
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(dates, balances)
-
-    # Annotate ~7 evenly spaced points so the chart isn't cluttered but still readable
-    # Don't put a point so close to the last one
-    _annotate_points(ax, dates, balances, [i for i in range(len(dates)) if (i % (len(dates) // 16) == 0 and i < len(dates) * 0.95) or i == len(dates) - 1])
-
-    ax.set_title(graph_title.capitalize())
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Balance ($)")
-
-    # Rotate x-axis date labels so they don't overlap
-    fig.autofmt_xdate()
-
-    plt.tight_layout()
-    plt.show()
-
-
 def plot_line_fidelity_portfolio(summaries: list):
     """
     Plots total investment portfolio value over time as a line chart.
@@ -203,17 +155,6 @@ def plot_line_fidelity_portfolio(summaries: list):
     # Append the final day's balance after the loop
     balances.append(round(sum(curr_balances.values()), 2))
     dates.append(datetime.strptime(curr_date, "%m/%d/%Y"))
-    # from collections import defaultdict
-
-    # # Sum both accounts' ending market value for each date to get total portfolio value
-    # by_date = defaultdict(float)
-    # for s in summaries:
-    #     if s["ending_mkt_value"] is not None:
-    #         by_date[s["date"]] += s["ending_mkt_value"]
-
-    # sorted_items = sorted(by_date.items(), key=lambda x: datetime.strptime(x[0], "%m/%d/%Y"))
-    # dates = [datetime.strptime(k, "%m/%d/%Y") for k, _ in sorted_items]
-    # values = [v for _, v in sorted_items]
 
     fig, ax = plt.subplots(figsize=(12, 6))
     ax.plot(dates, balances)
@@ -242,7 +183,7 @@ def plot_line_fidelity_per_account(summaries: list):
     by_account = defaultdict(list)
     for s in summaries:
         if s["ending_mkt_value"] is not None:
-            by_account[s["account_type"]].append((s["date"], s["ending_mkt_value"]))
+            by_account[s["account"]].append((s["date"], s["ending_mkt_value"]))
 
     fig, ax = plt.subplots(figsize=(12, 6))
     for account_type, pairs in sorted(by_account.items()):
@@ -279,7 +220,7 @@ def plot_line_fidelity_individual_holdings(holdings: list):
     # Group entries by "SYMBOL (Account Type)" label
     series = defaultdict(list)
     for h in holdings:
-        key = f"{h['symbol']} ({h['account_type']})"
+        key = f"{h['symbol']} ({h['account']})"
         series[key].append((h["date"], h["ending_value"], h["cost_basis"]))
 
     fig, ax = plt.subplots(figsize=(12, 6))
