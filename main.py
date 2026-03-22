@@ -15,7 +15,7 @@ from charts import (
     plot_bar_monthly_income_vs_spending,
     plot_line_fidelity_portfolio, 
     plot_line_fidelity_per_account, 
-    plot_line_fidelity_individual_holdings
+    plot_line_fidelity_holdings
 )
 from validator import validate_balance
 
@@ -99,12 +99,7 @@ if __name__ == "__main__":
     )
 
     # Save the parsed data to CSV files
-    save_to_csv(credit_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedCreditTransactions.csv')
-    save_to_csv(checking_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedCheckingTransactions.csv')
-    save_to_csv(savings_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedSavingsTransactions.csv')
-    save_to_csv(all_fidelity_summaries, '/home/malsenan/Documents/finances/parsed_data/parsedFidelitySummaries.csv')
-    save_to_csv(fidelity_individual_holdings, '/home/malsenan/Documents/finances/parsed_data/parsedFidelityHoldings.csv')
-    save_to_csv(fidelity_401k_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedFidelity401k.csv')
+
     
     curr_balances = {}
     curr_date = None
@@ -114,8 +109,18 @@ if __name__ == "__main__":
         t['net_worth'] = round(sum(curr_balances.values()), 2)
 
     # Save the parsed data to CSV files
+    save_to_csv(credit_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedCreditTransactions.csv')
+    save_to_csv(checking_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedCheckingTransactions.csv')
+    save_to_csv(savings_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedSavingsTransactions.csv')
     save_to_csv(all_transactions, '/home/malsenan/Documents/finances/parsed_data/allParsedTransactions.csv')
     save_to_csv(checking_summary + savings_summary, '/home/malsenan/Documents/finances/parsed_data/bankAccountSummaries.csv')
+
+    save_to_csv(fidelity_individual_holdings, '/home/malsenan/Documents/finances/parsed_data/parsedFidelityHoldings.csv')
+    save_to_csv(fidelity_401k_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedFidelity401k.csv')
+    save_to_csv(fidelity_statements, '/home/malsenan/Documents/finances/parsed_data/parsedFidelity401k.csv')
+    save_to_csv(all_fidelity_summaries, '/home/malsenan/Documents/finances/parsed_data/parsedFidelitySummaries.csv')
+    
+    
 
     # Log human readable statistics and transaction stuff
     lines: List[str] = [line for line in
@@ -173,5 +178,6 @@ if __name__ == "__main__":
     # Plot Fidelity data
     plot_line_fidelity_portfolio(all_fidelity_summaries)
     plot_line_fidelity_per_account(all_fidelity_summaries)
-    plot_line_fidelity_individual_holdings(fidelity_individual_holdings)
-    
+    plot_line_fidelity_holdings(fidelity_individual_holdings)
+    plot_line_fidelity_holdings(fidelity_401k_transactions)
+    plot_line_fidelity_holdings(all_fidelity_transactions)

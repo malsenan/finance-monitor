@@ -202,7 +202,7 @@ def plot_line_fidelity_per_account(summaries: list):
     plt.show()
 
 
-def plot_line_fidelity_individual_holdings(holdings: list):
+def plot_line_fidelity_holdings(holdings: list):
     """
     Plots market value and cost basis over time for each held security.
 
