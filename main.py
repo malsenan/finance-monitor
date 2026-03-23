@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List
 from copy import deepcopy
 
-from parsers import aggregate_credit_files, parse_checking_or_savings_file, parse_fidelity_401k, aggregate_fidelity_statements
+from parsers import aggregate_credit_files, parse_checking_or_savings_file, parse_fidelity_401k, aggregate_fidelity_individual_statements
 from exporters import save_to_csv
 from reporters import (
     log_account_stats_between,
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     fidelity_401k_summaries, fidelity_401k_holdings = parse_fidelity_401k("/home/malsenan/Documents/finances/fidelity/fidelityTransactions.csv")
 
     # Parse Fidelity investment statements
-    fidelity_individual_summaries, fidelity_individual_holdings = aggregate_fidelity_statements('/home/malsenan/Documents/finances/fidelity')
+    fidelity_individual_summaries, fidelity_individual_holdings = aggregate_fidelity_individual_statements('/home/malsenan/Documents/finances/fidelity')
 
     # Aggregate 401k and individual fidelity data
     all_fidelity_summaries = list(
@@ -57,6 +57,14 @@ if __name__ == "__main__":
             reverse=True
         )
     )
+
+    # For Fidelity, create separate list that will also hold unrealized_gains and net_worth to save to csv
+    enhanced_fidelity_holdings = deepcopy(all_fidelity_holdings)
+    curr_balances = {}
+    for holding in enhanced_fidelity_holdings[::-1]:
+        holding['unrealized_gains'] = round(holding['ending_value'] - holding['cost_basis'], 2)
+        curr_balances[holding['account']] = holding['ending_value']
+        holding['net_worth'] = round(sum(curr_balances.values()), 2)
 
     # Validate all transactions are accounted for in the running balances
     validate_balance(checking_transactions)
@@ -107,9 +115,7 @@ if __name__ == "__main__":
 
     # Calculate net worth on all_transactions
     curr_balances = {}
-    curr_date = None
     for t in all_transactions[::-1]:
-        curr_date = t['date']
         curr_balances[t['account']] = t['balance']
         t['net_worth'] = round(sum(curr_balances.values()), 2)
 
@@ -124,7 +130,7 @@ if __name__ == "__main__":
     save_to_csv(fidelity_401k_holdings, '/home/malsenan/Documents/finances/parsed_data/parsedFidelity401k.csv')
     save_to_csv(fidelity_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedFidelityTransactions.csv')
     save_to_csv(all_fidelity_summaries, '/home/malsenan/Documents/finances/parsed_data/parsedFidelitySummaries.csv')
-    save_to_csv(all_fidelity_holdings, '/home/malsenan/Documents/finances/parsed_data/parsedFidelityHoldings.csv')
+    save_to_csv(enhanced_fidelity_holdings, '/home/malsenan/Documents/finances/parsed_data/parsedFidelityHoldings.csv')
     
     # Save the all aggregated data to a CSV file
     save_to_csv(all_transactions, '/home/malsenan/Documents/finances/parsed_data/allParsedTransactions.csv')
@@ -176,7 +182,6 @@ if __name__ == "__main__":
 
         # Plots total fidelity balance (personal brokerage + ROTH IRA + 401k) over time against total cost basis
         plot_line_monthly_balance([(fidelity_transactions, "sum of accounts"), (cost_bases, "money invested")], graph_title="fidelity balances over time")
-
 
         plot_line_savings_rate(checking_transactions, savings_transactions)
 
