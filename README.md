@@ -130,7 +130,7 @@ All charts are toggled via flags at the top of `main.py`.
 ## Field Reference
 
 ### General Transactions (bank and fidelity)
-- Objects: `credit_transactions`, `checking_transactions`, `savings_transactions`, `fidelity_statements`, `cost_bases`
+- Objects: `credit_transactions`, `checking_transactions`, `savings_transactions`, `fidelity_transactions`, `cost_bases`, `all_transactions`
 | Field         | Description
 |---------------|-------------
 | `date`        | Date of transaction
@@ -139,38 +139,16 @@ All charts are toggled via flags at the top of `main.py`.
 | `amount`      | Transaction amount
 | `balance`     | Running balance of the account
 
-
 ### Fidelity Holdings
-- Objects: `fidelity_401k_holdings`, `fidelity_individual_holdings`
+- Objects: `fidelity_401k_holdings`, `fidelity_individual_holdings`, `all_fidelity_holdings`
 | Field         | Description
 |---------------|-------------
-| `date`        | Date of transaction
-| `account`     | Account tied to transaction
-| `symbol` | Stock symbol
-| `description` | Description of the transaction
-| `quantity`      | Transaction amount
-| `balance`     | Running balance of the account
-
-
-
-### Account Summary
-| Field | Description |
-|---|---|
-| `beginning_mkt_value` | Total market value at the start of the period |
-| `change_in_investment` | Net cash flow in/out during the period (deposits − withdrawals, excludes gains) |
-| `ending_mkt_value` | Total market value at the end of the period |
-| `dividends_period` | Dividends earned during this specific period |
-| `dividends_ytd` | Dividends earned from Jan 1st through end of period (cumulative) |
-| `total_period` | Total return for this period (gains + dividends) |
-| `total_ytd` | Total return from Jan 1st through end of period (cumulative) |
-
-### Holdings
-| Field | Description |
-|---|---|
-| `quantity` | Number of shares owned |
-| `price` | Price per share at end of period |
-| `beginning_value` | Market value at start of period (`quantity × price` at open) |
-| `ending_value` | Market value at end of period (`quantity × price` at close) |
-| `cost_basis` | Total amount originally paid for shares — used to calculate gains/losses |
-
-> **Note:** `cost_basis` is what you *paid* historically, while `beginning_value` is what it was *worth* at the start of the current period.
+| `date`            | Date of transaction
+| `account`         | Account tied to transaction
+| `symbol`          | Stock symbol
+| `description`     | Description of the transaction
+| `quantity`        | Number of shares owned
+| `price_per_share` | Current price per share at time of transaction
+| `beginning_value` | Value of all shares at start of period
+| `ending_value`    | Value of all shares at end of period
+| `cost_basis`      | Total cash paid for all shares

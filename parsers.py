@@ -280,7 +280,7 @@ def parse_fidelity_statement(file_path: str, exclude_cash: bool = False) -> Tupl
     return account_summaries, holdings
 
 
-def aggregate_fidelity_statements(directory: str) -> Tuple[List[Dict], List[FidelityTransaction]]:
+def aggregate_fidelity_individual_statements(directory: str) -> Tuple[List[Dict], List[FidelityTransaction]]:
     """
     Aggregates data from all Fidelity statement CSVs in a directory.
 
