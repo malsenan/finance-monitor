@@ -1,6 +1,7 @@
 import heapq
 from datetime import datetime
 from typing import List
+from copy import deepcopy
 
 from parsers import aggregate_credit_files, parse_checking_or_savings_file, parse_fidelity_401k, aggregate_fidelity_statements
 from exporters import save_to_csv
@@ -9,17 +10,22 @@ from reporters import (
     log_last_x_transactions,
     log_transactions_since,
     log_top_aggregate_transactions,
+    log_return_per_holding,
 )
 from charts import (
-    plot_line_monthly_balance, 
+    plot_line_monthly_balance,
     plot_bar_monthly_income_vs_spending,
-    plot_line_fidelity_portfolio, 
-    plot_line_fidelity_per_account, 
+    plot_line_savings_rate,
+    plot_line_fidelity_portfolio,
+    plot_line_fidelity_per_account,
     plot_line_fidelity_holdings
 )
 from validator import validate_balance
 
 if __name__ == "__main__":
+    plot_balances = False
+    plot_income_vs_spending = False
+    plot_fidelity = False
 
     # Aggregate data from all CSV files in the specified directory
     credit_transactions = aggregate_credit_files('/home/malsenan/Documents/finances/bofa/credit')
@@ -29,7 +35,7 @@ if __name__ == "__main__":
     savings_summary, savings_transactions = parse_checking_or_savings_file("/home/malsenan/Documents/finances/bofa/savings/savingsTransactions.csv")
 
     # Parse Fidelity 401k transactions
-    fidelity_401k_summaries, fidelity_401k_transactions = parse_fidelity_401k("/home/malsenan/Documents/finances/fidelity/fidelityTransactions.csv")
+    fidelity_401k_summaries, fidelity_401k_holdings = parse_fidelity_401k("/home/malsenan/Documents/finances/fidelity/fidelityTransactions.csv")
 
     # Parse Fidelity investment statements
     fidelity_individual_summaries, fidelity_individual_holdings = aggregate_fidelity_statements('/home/malsenan/Documents/finances/fidelity')
@@ -43,9 +49,9 @@ if __name__ == "__main__":
             reverse=True
         )
     )
-    all_fidelity_transactions = list(
+    all_fidelity_holdings = list(
         heapq.merge(
-            fidelity_401k_transactions,
+            fidelity_401k_holdings,
             fidelity_individual_holdings,
             key=lambda t: datetime.strptime(t["date"], "%m/%d/%Y"),
             reverse=True
@@ -58,24 +64,24 @@ if __name__ == "__main__":
 
     # Grab list of individual fidelity transactions to merge into all transactions
     # Sanitize to have fields {date, account, description, amount (curr_cost_basis - prev_cost_basis), and balance ('ending_value')}
-    fidelity_statements = []
+    fidelity_transactions = []
     cost_bases = []
-    for i, transaction in enumerate(all_fidelity_transactions[::-1]):
+    for i, transaction in enumerate(all_fidelity_holdings[::-1]):
 
         transaction_cost = transaction['cost_basis']
         # Find prev cost_basis (if exists) to subtract by and find cost of transaction
-        for prev_transaction in all_fidelity_transactions[len(all_fidelity_transactions) - i:]:
+        for prev_transaction in all_fidelity_holdings[len(all_fidelity_holdings) - i:]:
             if prev_transaction['account'] == transaction['account'] and prev_transaction['symbol'] == transaction['symbol']:
                 transaction_cost = round(transaction_cost - prev_transaction['cost_basis'], 2)
                 break
 
-        fidelity_statements.insert(0,
+        fidelity_transactions.insert(0,
             {
                 'date': transaction['date'],
                 'account': transaction['account'],
                 'description': transaction['description'],
                 'amount': transaction_cost,
-                'balance': round(sum(t['ending_value'] for t in [holding for holding in all_fidelity_transactions if holding['date'] == transaction['date'] and holding['account'] == transaction['account']]), 2)
+                'balance': round(sum(t['ending_value'] for t in [holding for holding in all_fidelity_holdings if holding['date'] == transaction['date'] and holding['account'] == transaction['account']]), 2)
             }
         )
         cost_bases.insert(0, { 
@@ -83,24 +89,23 @@ if __name__ == "__main__":
             'account': transaction['account'],
             'description': transaction['description'],
             'amount': transaction_cost,
-            'balance': round(sum(t['cost_basis'] for t in [holding for holding in all_fidelity_transactions if holding['date'] == transaction['date'] and holding['account'] == transaction['account']]), 2)
+            'balance': round(sum(t['cost_basis'] for t in [holding for holding in all_fidelity_holdings if holding['date'] == transaction['date'] and holding['account'] == transaction['account']]), 2)
         })
 
     # Save all transactions in a single data structure
+    # Use deep copies, otherwise changes to all_transactions apply to the other arrays
     all_transactions = list(
         heapq.merge(
-            credit_transactions,
-            checking_transactions,
-            savings_transactions,
-            fidelity_statements,
+            deepcopy(credit_transactions),
+            deepcopy(checking_transactions),
+            deepcopy(savings_transactions),
+            deepcopy(fidelity_transactions),
             key=lambda t: datetime.strptime(t["date"], "%m/%d/%Y"),
             reverse=True
         )
     )
 
-    # Save the parsed data to CSV files
-
-    
+    # Calculate net worth on all_transactions
     curr_balances = {}
     curr_date = None
     for t in all_transactions[::-1]:
@@ -108,19 +113,21 @@ if __name__ == "__main__":
         curr_balances[t['account']] = t['balance']
         t['net_worth'] = round(sum(curr_balances.values()), 2)
 
-    # Save the parsed data to CSV files
+    # Save the BofA data to CSV files
     save_to_csv(credit_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedCreditTransactions.csv')
     save_to_csv(checking_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedCheckingTransactions.csv')
     save_to_csv(savings_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedSavingsTransactions.csv')
-    save_to_csv(all_transactions, '/home/malsenan/Documents/finances/parsed_data/allParsedTransactions.csv')
     save_to_csv(checking_summary + savings_summary, '/home/malsenan/Documents/finances/parsed_data/bankAccountSummaries.csv')
 
-    save_to_csv(fidelity_individual_holdings, '/home/malsenan/Documents/finances/parsed_data/parsedFidelityHoldings.csv')
-    save_to_csv(fidelity_401k_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedFidelity401k.csv')
-    save_to_csv(fidelity_statements, '/home/malsenan/Documents/finances/parsed_data/parsedFidelity401k.csv')
+    # Save the Fidelity data to CSV files
+    save_to_csv(fidelity_individual_holdings, '/home/malsenan/Documents/finances/parsed_data/parsedFidelityIndividiual.csv')
+    save_to_csv(fidelity_401k_holdings, '/home/malsenan/Documents/finances/parsed_data/parsedFidelity401k.csv')
+    save_to_csv(fidelity_transactions, '/home/malsenan/Documents/finances/parsed_data/parsedFidelityTransactions.csv')
     save_to_csv(all_fidelity_summaries, '/home/malsenan/Documents/finances/parsed_data/parsedFidelitySummaries.csv')
+    save_to_csv(all_fidelity_holdings, '/home/malsenan/Documents/finances/parsed_data/parsedFidelityHoldings.csv')
     
-    
+    # Save the all aggregated data to a CSV file
+    save_to_csv(all_transactions, '/home/malsenan/Documents/finances/parsed_data/allParsedTransactions.csv')
 
     # Log human readable statistics and transaction stuff
     lines: List[str] = [line for line in
@@ -135,7 +142,8 @@ if __name__ == "__main__":
         # Aggregate equal transactions and log by most frequent (ex: Description: METRO 01/18 MOBILE PURCHASE WASH | Amount: -2.5 | Count: 3)
         log_top_aggregate_transactions(checking_transactions, 10) +
         log_top_aggregate_transactions(savings_transactions, 10) +
-        log_top_aggregate_transactions(credit_transactions, 10)
+        log_top_aggregate_transactions(credit_transactions, 10) +
+        log_return_per_holding(all_fidelity_holdings)
     ]
 
     # Calculate net worth and put it at the top of the file
@@ -148,36 +156,44 @@ if __name__ == "__main__":
     with open('/home/malsenan/Documents/finances/parsed_data/stats.txt', 'w') as stats_file:
         stats_file.write('\n'.join(lines))
 
-    # Plot net worth over time (checking + savings - credit)
-    plot_line_monthly_balance(all_transactions, graph_title='net worth over time')
+    if plot_balances:
+        # Plot net worth over time (checking + savings - credit)
+        plot_line_monthly_balance(all_transactions, graph_title='net worth over time')
 
-    
-    plot_line_monthly_balance(checking_transactions, graph_title='checking balance')
-    plot_line_monthly_balance(savings_transactions, graph_title='savings balance')
-    plot_line_monthly_balance(credit_transactions, graph_title='credit balance')
-    
+        plot_line_monthly_balance(checking_transactions, graph_title='checking balance')
+        plot_line_monthly_balance(savings_transactions, graph_title='savings balance')
+        plot_line_monthly_balance(credit_transactions, graph_title='credit balance')
+        
 
-    # Plot balance over time on checking, savings, and credit accounts (one chart)
-    plot_line_monthly_balance([
-        (all_transactions, "all"),
-        (checking_transactions, "checking"),
-        (savings_transactions, "savings"),
-        (credit_transactions, "credit"),
-        (fidelity_statements, "fidelity"),  
-    ], graph_title="account balances over time")
+        # Plot balance over time on checking, savings, and credit accounts (one chart)
+        plot_line_monthly_balance([
+            (all_transactions, "all"),
+            (checking_transactions, "checking"),
+            (savings_transactions, "savings"),
+            (credit_transactions, "credit"),
+            (fidelity_transactions, "fidelity"),  
+        ], graph_title="account balances over time")
 
-    plot_line_monthly_balance([(fidelity_statements, "sum of accounts"), (cost_bases, "money invested")], graph_title="fidelity balances over time")
+        # Plots total fidelity balance (personal brokerage + ROTH IRA + 401k) over time against total cost basis
+        plot_line_monthly_balance([(fidelity_transactions, "sum of accounts"), (cost_bases, "money invested")], graph_title="fidelity balances over time")
 
-    # Plot daily income vs. spending
-    # plot_bar_monthly_income_vs_spending(all_transactions, graph_title="Total Monthly Income vs. Spending", limit=1000)
-    # plot_bar_monthly_income_vs_spending(checking_transactions, graph_title="Checking Monthly Income vs. Spending", limit=1000)
-    # plot_bar_monthly_income_vs_spending(savings_transactions, graph_title="Savings Monthly Income vs. Spending", limit=1000)
-    # plot_bar_monthly_income_vs_spending(credit_transactions, graph_title="Credit Monthly Income vs. Spending", limit=284)
 
+        plot_line_savings_rate(checking_transactions, savings_transactions)
+
+    if plot_income_vs_spending:
+        # Plot daily income vs. spending
+        plot_bar_monthly_income_vs_spending(all_transactions, graph_title="Total Monthly Income vs. Spending", limit=1000)
+        plot_bar_monthly_income_vs_spending(checking_transactions, graph_title="Checking Monthly Income vs. Spending", limit=1000)
+        plot_bar_monthly_income_vs_spending(savings_transactions, graph_title="Savings Monthly Income vs. Spending", limit=1000)
+        plot_bar_monthly_income_vs_spending(credit_transactions, graph_title="Credit Monthly Income vs. Spending", limit=284)
 
     # Plot Fidelity data
-    plot_line_fidelity_portfolio(all_fidelity_summaries)
-    plot_line_fidelity_per_account(all_fidelity_summaries)
-    plot_line_fidelity_holdings(fidelity_individual_holdings)
-    plot_line_fidelity_holdings(fidelity_401k_transactions)
-    plot_line_fidelity_holdings(all_fidelity_transactions)
+    if plot_fidelity:
+        
+        plot_line_fidelity_portfolio(all_fidelity_summaries)
+        plot_line_fidelity_per_account(all_fidelity_summaries)
+
+        #Plots each symbol (ex: FXAIX) separately
+        plot_line_fidelity_holdings(fidelity_individual_holdings)
+        plot_line_fidelity_holdings(fidelity_401k_holdings)
+        plot_line_fidelity_holdings(all_fidelity_holdings)
