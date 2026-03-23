@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from datetime import datetime
 from typing import List
+from copy import deepcopy
 
 from models import BankTransaction, FidelityTransaction
 
@@ -328,3 +329,82 @@ def plot_line_fidelity_holdings(holdings: list):
     fig.autofmt_xdate()
     plt.tight_layout()
     plt.show()
+
+def plot_line_savings_by_month(savings_transactions: List[BankTransaction], fidelity_transactions: List[FidelityTransaction]):
+    """
+    Plots monthly savings rate as a line chart.
+
+    savings_rate = net_cash_flow / income per month, combining savings and fidelity accounts.
+
+    Parameters:
+    - savings_transactions: List of savings account transaction dicts.
+    - fidelity_transactions: List of fidelity transaction dicts.
+    """
+    # Plot savings rate ( (sum(cost_bases) + savings contribution) / income ), don't use net worth because that includes market change and not solely savings
+    # Some leetcode shit
+    # Iterate both transactions list at the same time, grabbing the transaction with the oldest date first to process
+    savings_ptr = len(savings_transactions) - 1
+    fidelity_ptr = len(fidelity_transactions) - 1
+    curr_period = None  # Keep track of current monthly period (it's a date but it's monthly)
+    periods = []    # X-Axis: List of periods to plot as time
+    prev_balances = {}   # Keep track of previous period balances so savings = curr_balance - prev_balance
+    curr_balances = {}
+    savings_rates = []   # Y-Axis: List of amount saved per period
+    while savings_ptr >= 0 or fidelity_ptr >= 0:
+        # Ran out of savings transactions to parse
+        if savings_ptr < 0:
+            # If entering a new month, store total amount saved last month before continuing
+            if curr_period is not None and curr_period.month != datetime.strptime(fidelity_transactions[fidelity_ptr]['date'], "%m/%d/%Y").month:
+                savings_rates.append((sum(curr_balances.values()) - sum(prev_balances.values())) / 125000)
+                periods.append(curr_period) # curr_period should be the last date before entering the new month
+                prev_balances = deepcopy(curr_balances) # Reset prev_balances
+            curr_period = datetime.strptime(fidelity_transactions[fidelity_ptr]['date'], "%m/%d/%Y") # Update period date
+            curr_balances[fidelity_transactions[fidelity_ptr]['account']] = fidelity_transactions[fidelity_ptr]['balance']
+            fidelity_ptr -= 1
+
+        # Ran out of fidelity transactions to parse
+        elif fidelity_ptr < 0:
+            # If entering a new month, get total amount saved this month
+            if curr_period is not None and curr_period.month != datetime.strptime(savings_transactions[savings_ptr]['date'], "%m/%d/%Y").month:
+                savings_rates.append((sum(curr_balances.values()) - sum(prev_balances.values())) / 125000)
+                periods.append(curr_period)
+                prev_balances = deepcopy(curr_balances) # Reset prev_balances
+            curr_period = datetime.strptime(savings_transactions[savings_ptr]['date'], "%m/%d/%Y")
+            curr_balances[savings_transactions[savings_ptr]['account']] = savings_transactions[savings_ptr]['balance']
+            savings_ptr -= 1
+
+        else:
+            # If entering a new month, get total amount saved this month
+            if (curr_period is not None and
+                    curr_period.month != datetime.strptime(savings_transactions[savings_ptr]['date'], "%m/%d/%Y").month and
+                    curr_period.month != datetime.strptime(fidelity_transactions[fidelity_ptr]['date'], "%m/%d/%Y").month):
+                savings_rates.append((sum(curr_balances.values()) - sum(prev_balances.values())) / 125000)
+                periods.append(curr_period)
+                prev_balances = deepcopy(curr_balances) # Reset prev_balances
+                
+            # Parse the older transaction first
+            if datetime.strptime(savings_transactions[savings_ptr]['date'], "%m/%d/%Y") < datetime.strptime(fidelity_transactions[fidelity_ptr]['date'], "%m/%d/%Y"):
+                curr_period = datetime.strptime(savings_transactions[savings_ptr]['date'], "%m/%d/%Y")
+                curr_balances[savings_transactions[savings_ptr]['account']] = savings_transactions[savings_ptr]['balance']
+                savings_ptr -= 1
+
+            else:
+                curr_period = datetime.strptime(fidelity_transactions[fidelity_ptr]['date'], "%m/%d/%Y")
+                curr_balances[fidelity_transactions[fidelity_ptr]['account']] = fidelity_transactions[fidelity_ptr]['balance']
+                fidelity_ptr -= 1
+    
+    # Append last balance and period
+    savings_rates.append((sum(curr_balances.values()) - sum(prev_balances.values())) / 125000)
+    periods.append(curr_period)
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(periods, savings_rates, label="savings rate")
+
+    ax.set_title("Monthly Savings Rate")
+    ax.set_xlabel("Month")
+    ax.set_ylabel("Savings Rate (%)")
+    ax.legend()
+    fig.autofmt_xdate()
+    plt.tight_layout()
+    plt.show()
+

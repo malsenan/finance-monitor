@@ -18,7 +18,8 @@ from charts import (
     plot_line_savings_rate,
     plot_line_fidelity_portfolio,
     plot_line_fidelity_per_account,
-    plot_line_fidelity_holdings
+    plot_line_fidelity_holdings,
+    plot_line_savings_by_month
 )
 from validator import validate_balance
 
@@ -65,6 +66,7 @@ if __name__ == "__main__":
         holding['unrealized_gains'] = round(holding['ending_value'] - holding['cost_basis'], 2)
         curr_balances[holding['account']] = holding['ending_value']
         holding['net_worth'] = round(sum(curr_balances.values()), 2)
+        
 
     # Validate all transactions are accounted for in the running balances
     validate_balance(checking_transactions)
@@ -181,9 +183,11 @@ if __name__ == "__main__":
         ], graph_title="account balances over time")
 
         # Plots total fidelity balance (personal brokerage + ROTH IRA + 401k) over time against total cost basis
-        plot_line_monthly_balance([(fidelity_transactions, "sum of accounts"), (cost_bases, "money invested")], graph_title="fidelity balances over time")
+        plot_line_monthly_balance([(fidelity_transactions, "sum of accounts"), (cost_bases, "money invested")], graph_title="fidelity balances over time")            
 
-        plot_line_savings_rate(checking_transactions, savings_transactions)
+    plot_line_savings_by_month(savings_transactions, fidelity_transactions)
+
+    
 
     if plot_income_vs_spending:
         # Plot daily income vs. spending
