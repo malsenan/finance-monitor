@@ -199,6 +199,49 @@ def log_transactions_since(checking_transactions: List[BankTransaction],
     return lines
 
 
+def log_return_per_holding(holdings: list) -> List[str]:
+    """
+    Returns the unrealized return % for each holding (symbol + account), using the most recent entry.
+
+    Formula: (ending_value - cost_basis) / cost_basis * 100
+
+    Parameters:
+    - holdings: List of holding dicts with keys: symbol, account, date, ending_value, cost_basis.
+
+    Returns:
+    - List of formatted strings ready to be written to a report file.
+    """
+    # Keep only the most recent entry per (symbol, account)
+    latest: dict = {}
+    for h in holdings:
+        if h.get("cost_basis") is None or h.get("ending_value") is None:
+            continue
+        key = (h["symbol"], h["account"])
+        if key not in latest or datetime.strptime(h["date"], "%m/%d/%Y") > datetime.strptime(latest[key]["date"], "%m/%d/%Y"):
+            latest[key] = h
+
+    lines = []
+    lines.append("\n\nRETURN % PER HOLDING\n")
+    lines.append("Holdings")
+    lines.append("=" * 30)
+
+    for key, h in sorted(latest.items(), key=lambda x: (
+        (x[1]["ending_value"] - x[1]["cost_basis"]) / x[1]["cost_basis"] * 100
+        if x[1]["cost_basis"] != 0 else 0
+    ), reverse=True):
+        if h["cost_basis"] == 0:
+            continue
+        ret_pct = (h["ending_value"] - h["cost_basis"]) / h["cost_basis"] * 100
+        gain_loss = h["ending_value"] - h["cost_basis"]
+        sign = "+" if ret_pct >= 0 else ""
+        gl_sign = "+" if gain_loss >= 0 else ""
+        symbol_col = (h["symbol"][:16] + (" " * 16))[:16]
+        account_col = (h["account"][:24] + (" " * 24))[:24]
+        lines.append(f"Symbol: {symbol_col} | Account: {account_col} | Return: {(sign + f'{ret_pct:.2f}%' + ' ' * 10)[:10]} | Market Value: {(str(round(h['ending_value'], 2)) + ' ' * 12)[:12]} | Cost Basis: {(str(round(h['cost_basis'], 2)) + ' ' * 12)[:12]} | Gain/Loss: {gl_sign}{round(gain_loss, 2)} | As of: {h['date']}")
+
+    return lines
+
+
 def log_top_aggregate_transactions(transactions: List[BankTransaction], num_transactions: int) -> List[str]:
     """
     Groups transactions by (description, amount) and returns the top N most frequent ones.
