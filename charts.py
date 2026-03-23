@@ -128,6 +128,52 @@ def plot_bar_monthly_income_vs_spending(transactions: List[BankTransaction], gra
     plt.tight_layout()
     plt.show()
 
+def plot_line_savings_rate(checking_transactions: List[BankTransaction], savings_transactions: List[BankTransaction]):
+    """
+    Plots monthly savings rate as a line chart.
+
+    savings_rate = net_cash_flow / income per month, combining checking and savings accounts.
+    Months with no income are skipped. A horizontal zero line is drawn for reference.
+
+    Parameters:
+    - checking_transactions: List of checking account transaction dicts.
+    - savings_transactions: List of savings account transaction dicts.
+    """
+    from collections import defaultdict
+
+    monthly_income = defaultdict(float)
+    monthly_net = defaultdict(float)
+
+    for t in checking_transactions + savings_transactions:
+        key = datetime.strptime(t["date"], "%m/%d/%Y").strftime("%Y-%m")
+        if t["amount"] > 0:
+            monthly_income[key] += t["amount"]
+        monthly_net[key] += t["amount"]
+
+    months = sorted(k for k in monthly_income if monthly_income[k] > 0)
+    dates = [datetime.strptime(k, "%Y-%m") for k in months]
+    rates = [monthly_net[k] / monthly_income[k] * 100 for k in months]
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(dates, rates, marker="o", markersize=4)
+    ax.axhline(0, color="red", linestyle="--", linewidth=1)
+
+    for d, r in zip(dates, rates):
+        ax.annotate(
+            f"{r:.1f}%",
+            xy=(d, r), xytext=(0, 8),
+            textcoords="offset points",
+            fontsize=7, ha="center",
+        )
+
+    ax.set_title("Monthly Savings Rate (Checking + Savings)")
+    ax.set_xlabel("Month")
+    ax.set_ylabel("Savings Rate (%)")
+    fig.autofmt_xdate()
+    plt.tight_layout()
+    plt.show()
+
+
 def plot_line_fidelity_portfolio(summaries: list):
     """
     Plots total investment portfolio value over time as a line chart.
@@ -226,15 +272,54 @@ def plot_line_fidelity_holdings(holdings: list):
     fig, ax = plt.subplots(figsize=(12, 6))
     for label, entries in sorted(series.items()):
         entries.sort(key=lambda x: datetime.strptime(x[0], "%m/%d/%Y"))
-        dates = [datetime.strptime(e[0], "%m/%d/%Y") for e in entries]
-        ending_values = [e[1] for e in entries if e[1] is not None]
-        cost_bases = [e[2] for e in entries if e[2] is not None]
-        if ending_values:
-            # Plot market value as a solid line and capture its color
-            line, = ax.plot(dates[:len(ending_values)], ending_values, label=f"{label} market value")
-            if cost_bases:
-                # Use the same color with a dashed style so the two lines are visually paired
-                ax.plot(dates[:len(cost_bases)], cost_bases, linestyle="--", color=line.get_color(), label=f"{label} cost basis")
+        # Keep date aligned with each value to avoid index mismatches on None filtering
+        ev_points = [(datetime.strptime(e[0], "%m/%d/%Y"), e[1]) for e in entries if e[1] is not None]
+        cb_points = [(datetime.strptime(e[0], "%m/%d/%Y"), e[2]) for e in entries if e[2] is not None]
+        if not ev_points:
+            continue
+        ev_dates, ending_values = zip(*ev_points)
+        line, = ax.plot(ev_dates, ending_values, label=f"{label} market value")
+        if cb_points:
+            cb_dates, cost_bases = zip(*cb_points)
+            ax.plot(cb_dates, cost_bases, linestyle="--", color=line.get_color(), label=f"{label} cost basis")
+
+            # Shade the gap on the overlapping date range
+            shared_dates = sorted(set(ev_dates) & set(cb_dates))
+            if shared_dates:
+                ev_map = dict(zip(ev_dates, ending_values))
+                cb_map = dict(zip(cb_dates, cost_bases))
+                shared_ev = [ev_map[d] for d in shared_dates]
+                shared_cb = [cb_map[d] for d in shared_dates]
+                ax.fill_between(
+                    shared_dates, shared_ev, shared_cb,
+                    where=[ev >= cb for ev, cb in zip(shared_ev, shared_cb)],
+                    alpha=0.15, color="green", interpolate=True,
+                )
+                ax.fill_between(
+                    shared_dates, shared_ev, shared_cb,
+                    where=[ev < cb for ev, cb in zip(shared_ev, shared_cb)],
+                    alpha=0.15, color="red", interpolate=True,
+                )
+
+            # Annotate the gap at the last shared point
+            last_date = max(set(ev_dates) & set(cb_dates))
+            last_ev = dict(zip(ev_dates, ending_values))[last_date]
+            last_cb = dict(zip(cb_dates, cost_bases))[last_date]
+            gain_loss = last_ev - last_cb
+            mid_y = (last_ev + last_cb) / 2
+            gap_color = "green" if gain_loss >= 0 else "red"
+            sign = "+" if gain_loss >= 0 else ""
+            # Draw a double-headed arrow spanning the gap
+            ax.annotate(
+                "", xy=(last_date, last_cb), xytext=(last_date, last_ev),
+                arrowprops=dict(arrowstyle="<->", color=gap_color, lw=1.5),
+            )
+            ax.annotate(
+                f"{sign}${gain_loss:,.0f}",
+                xy=(last_date, mid_y), xytext=(6, 0),
+                textcoords="offset points",
+                fontsize=7, color=gap_color, va="center",
+            )
 
     ax.set_title("Holdings: Market Value vs Cost Basis Over Time")
     ax.set_xlabel("Date")
