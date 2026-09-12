@@ -1,0 +1,7 @@
+.aider*
+finances
+*.pyc
+launch.json
+Statement*
+.env
+__pycache__/
