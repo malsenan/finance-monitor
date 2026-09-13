@@ -2,6 +2,18 @@
 
 Parses locally exported statements from Bank of America and Fidelity — no bank logins, no APIs, no data leaving your machine. Aggregates transactions across all accounts into a single timeline, computes net worth at every point in time, and outputs both a human/AI-readable text report and a set of matplotlib charts.
 
+## Quick start
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env    # run this if .env doesn't already exist, then fill in your values (see Setup)
+python src/main.py
+```
+
+After the first time, you only need `source .venv/bin/activate` and `python src/main.py`.
+
 ## Setup
 
 All machine-specific and personal values live in a `.env` file, which is gitignored.
@@ -16,7 +28,7 @@ annual income, and your monthly spending limits. Every setting is documented inl
 `.env.example`. Real environment variables override the file, so nothing personal needs
 to be written to disk if you would rather export them in your shell.
 
-Requires `matplotlib` and `numpy`.
+Before the first run, create a `parsed_data` folder inside your `FINANCE_DATA_DIR`. The tool writes its output there and doesn't create the folder itself.
 
 ## Data Sources
 
@@ -97,13 +109,13 @@ Note: Some of the strings in the headers don't render properly in markdown view 
 
 Generated on every run. Safe to feed directly into an AI model — contains no account numbers or personal identifiers.
 
-- **Net worth** — sum of all account balances at the most recent date
-- **Per-account cash flow summary** (checking, savings, credit) for a configurable date range:
+- **Net worth** — checking + savings + credit balances at the most recent date. Fidelity accounts are not included
+- **Per-account cash flow summary** (checking, savings, credit) for a month range typed into `src/main.py` (edit those numbers by hand to change it):
   - Total income
   - Total expenses
   - Net cash flow
 - **Last N transactions** across checking, savings, and credit — side-by-side date-sorted table showing description, amount, and running balance per account
-- **All transactions since a given month** — same side-by-side format, full history from that date forward
+- **All transactions since a given month** — same side-by-side format, from a start month typed into `src/main.py`
 - **Top N recurring transactions per account** — grouped by (description, amount), sorted by frequency; shows count, earliest date, and latest date — useful for spotting subscriptions or suspicious charges
 - **Return % per Fidelity holding** — one row per (symbol, account) using the most recent statement:
   - Unrealized return %: `(ending_value - cost_basis) / cost_basis × 100`
@@ -112,7 +124,7 @@ Generated on every run. Safe to feed directly into an AI model — contains no a
 
 ## Charts
 
-All charts are toggled via flags at the top of `main.py`.
+Charts open in pop-up windows. Most are switched on by the `plot_balances`, `plot_income_vs_spending` and `plot_fidelity` flags at the top of `src/main.py`'s `__main__` block, which are all off by default. The monthly savings rate chart is the exception: it always runs.
 
 **Balance & Net Worth**
 - Net worth over time (line chart) — rolling sum of all account balances
@@ -122,7 +134,7 @@ All charts are toggled via flags at the top of `main.py`.
 
 **Cash Flow**
 - Monthly income vs. spending — bar chart per account (all transactions, checking, savings, credit)
-- Savings rate over time — net savings as a percentage of income, month over month (line chart)
+- Monthly savings rate (always shown) — each month's change in savings + Fidelity balances (including market gains), divided by `ANNUAL_INCOME` from `.env` (line chart)
 
 **Fidelity / Investments**
 - Total Fidelity portfolio value over time (all accounts combined)
@@ -132,7 +144,7 @@ All charts are toggled via flags at the top of `main.py`.
 ## Validation & CSV Exports
 
 - **Balance validation** — verifies that running balances in checking and savings transaction files are internally consistent
-- **CSV exports** — saves parsed versions of every data source to a configurable output directory:
+- **CSV exports** — saves parsed versions of every data source to `$FINANCE_DATA_DIR/parsed_data/`, which must already exist:
   - Credit, checking, savings transactions
   - All transactions combined
   - Bank account summaries
@@ -151,12 +163,14 @@ Tickets are in priority order: work top to bottom, and insert new tickets wherev
 
 ### Cleanup
 Done when a fresh clone needs only `pip install -r requirements.txt` and a filled-in `.env`, and the README matches the code.
-- (TODO) Delete the stale aider files (`.aider.chat.history.md`, `.aider.input.history`, `.aider.tags.cache.v4/`)
-- (TODO) `.gitignore`: drop `.aider*`, narrow `Statement*` and `finances` so test fixtures aren't ignored, and stop ignoring `.vscode/launch.json`
-- (TODO) Commit `CLAUDE.md`
-- (TODO) Add `requirements.txt` (`matplotlib`, `numpy`)
+- (DONE) Delete the stale aider files (`.aider.chat.history.md`, `.aider.input.history`, `.aider.tags.cache.v4/`)
+- (DONE) `.gitignore`: drop `.aider*`, narrow `Statement*` and `finances` so test fixtures aren't ignored, and stop ignoring `.vscode/launch.json`
+- (DONE) Commit `CLAUDE.md`
+- (DONE) Add `requirements.txt` (`matplotlib`, `numpy`)
+- (DONE) Move the Python sources into `src/`
+- (DONE) Point `.vscode/launch.json` at `src/main.py`
 - (DONE) README: checking/savings file paths in the download steps
-- (TODO) README: net worth scope, hardcoded report dates, chart flags, the savings rate chart, and the output directory needing to exist
+- (DONE) README: net worth scope, hardcoded report dates, chart flags, the savings rate chart, and the output directory needing to exist
 
 ### Decide Fidelity input data shapes
 Fidelity statements can no longer be downloaded as CSV. Done when every Fidelity number the monitor uses comes from a file that can still be downloaded, and the download steps are updated.

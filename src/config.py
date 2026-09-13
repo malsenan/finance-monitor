@@ -1,6 +1,7 @@
 import os
 
-_ENV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+# .env lives in the repo root, one level above src/
+_ENV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
 
 
 def _load_env_file(path: str) -> None:

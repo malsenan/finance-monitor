@@ -70,7 +70,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **Never run the code on the current .env, only read it. This repo does not have unit tests yet but it eventually will and you will be able to run those only. If absolutely necessary, copy this code into a tmp folder and create your own sample data to run against and clean up these resources afterwards.**
 
-- Dependencies: `matplotlib`, `numpy` (no requirements file, no test suite, no linter config).
+- Python sources live in `src/`. Run from the repo root with `python src/main.py`; `config.py` reads `.env` from the repo root.
+- Dependencies are in `requirements.txt` (`matplotlib`, `numpy`). No test suite or linter config yet.
 - `config.py` raises at import time if any required `.env` setting is missing, so every module that imports `config` needs a valid `.env`.
 - Output goes to `$FINANCE_DATA_DIR/parsed_data/` (parsed CSVs + `stats.txt`). That directory must already exist.
 - Charts call `plt.show()` and block. They are toggled by the `plot_*` booleans at the top of `main.py`'s `__main__` block. `plot_line_savings_by_month` runs regardless of those flags.
