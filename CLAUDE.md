@@ -60,6 +60,17 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+### 5. Ticket First
+
+**Every coding task starts as a ticket in the README.**
+
+The TODO list in `README.md` is the project's ticket tracker. Before changing any code:
+- Add the task as a ticket in its priority position, in the format described at the top of the TODO list.
+- Explain in detail why the task needs to be done, and why each of its subtasks needs to be done.
+- Stop there. Start the code only after the user has reviewed the ticket and it has been pushed.
+
+While working, mark each subtask (DONE) as it's finished.
+
 ## Project
 **Some general notes:**
 - **Everything under here is subject to change as the project evolves.**
