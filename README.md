@@ -175,68 +175,64 @@ Certain Fidelity statements can no longer be downloaded as CSV. Done when every 
 - (DONE) Provide masked samples of the transaction history. They're documented with made-up values in `docs/fidelity-transactions.md`
 - (DONE) Confirm the transaction history includes the 401k and goes back far enough. It covers every account, and `fidelityTransactions.csv` goes back to each account's first deposit
 - (DONE) Decide the sources: `fidelityTransactions.csv` only, rebuilt once from fresh `Accounts_History.csv` downloads (see the rewrite ticket below), with new downloads pasted at the top. `Portfolio_Positions` isn't needed for now (moved to the backlog), so the positions-file and gap-months subtasks were dropped
-- (TODO) Replace the dead Fidelity steps under "How to Update Financial Files"
+- (DONE) Replace the dead Fidelity steps under "How to Update Financial Files"
 
 ### Rewrite Fidelity parsing for `fidelityTransactions.csv`
-**Why:** The Roth IRA and individual account are parsed from statement CSVs, which can't be downloaded anymore. `fidelityTransactions.csv` holds every Fidelity account's full history, but in an older export layout, and `parse_fidelity_401k` can't read current downloads correctly:
+**Why:** The Roth IRA and individual account are parsed from statement CSVs, which can't be downloaded anymore. `fidelityTransactions.csv` holds every Fidelity account's full history, but the only parser that reads it, `parse_fidelity_401k`, was written for an older export layout:
 - it reads share counts from `Price ($)`, where the old export put them, but current downloads put them under `Quantity`
 - it ignores every row except `Contributions`
 - it finds plans by a single account-name prefix that can't match two employers
 
-Row meanings and calculation rules are in `docs/fidelity-transactions.md`.
+**Design:** one parser for every account that tracks funds only. It was chosen over a two-parser design that also tracked cash, which needed separate 401k and brokerage code and two kinds of `.env` settings. Row meanings, rules, output and worked examples are in `docs/fidelity-transactions.md`, which is the spec for the parser and its tests. Input is assumed to be well-formed and valid, so the parser has no error handling; that's left for later.
 
-Done when `fidelityTransactions.csv` is rebuilt in the current layout, both parsers read it, their tests pass, the statement parser is gone, and the Fidelity balance check under "Validation & Testing" passes.
+Done when `parse_fidelity_transactions` is the only Fidelity parser, its tests pass, and the Fidelity balances match Fidelity's website within the "Known limits" in `docs/fidelity-transactions.md` (stale 401k prices between contributions, and cash not yet in a fund).
 
-Not changing: `models.py`, `charts.py`, `reporters.py`, `exporters.py`, `validator.py`, and everything in `main.py` after the parser calls.
+Not changing: `charts.py`, `reporters.py`, `exporters.py`, `validator.py`, and `main.py`'s merge and derive steps (lines 64-124).
 
 - (DONE) Rebuild `fidelityTransactions.csv` from fresh `Accounts_History.csv` downloads (three one-year windows), and keep the old file as a backup under a different name (you)
   - Why: the old file uses an older, broken layout. On 401k rows the share count sits under `Price ($)` with `Quantity` blank, and each row has 15 fields against a 14-column header. Pasting new downloads on top would mix two layouts in one file, and the dates can't tell them apart: a 01/02/2024 row comes out differently depending on when it was downloaded. After a one-time rebuild, the parser only has to understand the current layout.
   - How: put the rows newest first under a single header, with no disclaimer lines and no dates repeated where the windows meet.
 - (DONE) Check that the rebuilt file reaches each account's first deposit, by comparing its oldest row per account with the old file's (you)
   - Why: every running total starts from each account's oldest row. If the download can't reach that far back, the older rows would have to be converted from the old file instead, which first needs samples of old brokerage rows to see how they're laid out.
-- (TODO) Send one masked row for each Action that isn't in `docs/fidelity-transactions.md`, taken from the rebuilt file (you)
-  - Why: the parsers work out what a row does from the signs of `Quantity` and `Amount ($)`, not from its Action text. An Action that breaks that pattern would be counted wrong without any error.
-- (TODO) Pick a test runner, moved here from "Test harness" (proposed: `pytest`)
-  - Why: tests on made-up rows are the only way to check the parsers without real data. `pytest` needs one `pip install` and uses plain `assert`s.
-- (DONE) Decide whether to print a warning when `fidelityTransactions.csv` has an account number that isn't in `.env`, and add it if so
-  - Why: those rows get skipped, so a new account you forget to add would silently drop out of net worth.
-  - Answer: if errors were to ever occur, I want loud and verbose failures telling the user where the failure was and why
-- (TODO) `src/config.py`: remove `RETIREMENT_ACCOUNT_PREFIX`
-  - Why: one account-name prefix can't match both employers' plans.
-- (TODO) `src/config.py`: read the account map from `.env` keys starting with `FIDELITY_401K_` or `FIDELITY_BROKERAGE_` (e.g. `FIDELITY_401K_EMPLOYER_1=<account number>`)
-  - Why a prefix: a new account or employer only needs a new `.env` line, not a code change.
-  - Why two prefixes: 401k rows and brokerage rows use `Amount ($)` with opposite signs, so the parser has to know which format each account uses.
-  - Why labels: outputs show the label (`EMPLOYER_1`) instead of Fidelity's account name, so `stats.txt` stops printing the employer's plan name (`src/reporters.py:239`).
-- (TODO) `.env.example`: replace `RETIREMENT_ACCOUNT_PREFIX` with example account map lines
-  - Why: `.env.example` documents every setting a fresh clone needs.
-- (TODO) Your `.env`: add your real account numbers and remove `RETIREMENT_ACCOUNT_PREFIX` (you)
-  - Why: the new config reads accounts from `.env`, and real account numbers stay out of the repo.
-- (TODO) `parse_fidelity_401k`: select rows by account number from the 401k map
-  - Why: it currently matches an account-name prefix (`src/parsers.py:150`).
-- (TODO) `parse_fidelity_401k`: read shares from `Quantity`, without `safe_float`
-  - Why: it reads shares from `Price ($)` (`src/parsers.py:153`), which is blank on 401k rows in current downloads, and then divides by it (`src/parsers.py:154`). `safe_float` rounds to 2 decimals, which turns a `-0.004` share fee into 0.
-- (TODO) `parse_fidelity_401k`: apply every row that moves shares, and take prices only from `Contributions` and `Withdrawals`
-  - Why: only `Contributions` count today (`src/parsers.py:150`), so fees never reduce shares and a rolled-over plan would keep counting on top of the new one. Fee rows are too rounded to give a reliable price.
-- (TODO) `parse_fidelity_401k`: track each fund per plan
-  - Why: funds are tracked by name alone (`src/parsers.py:151`), so the same fund held in two plans would merge.
-- (TODO) Add `parse_fidelity_brokerage(file_path, accounts)`: cash plus funds per account, returning the same two lists the statement parser returns
-  - Why: it replaces the statement CSVs for the Roth IRA and individual account. Matching the return shape keeps the rest of `main.py` unchanged.
-- (TODO) Both parsers: name holdings rows `<label> - <fund>`, and write one summary row per account
-  - Why: `src/main.py:96` adds up every holding with the same date and account, so per-fund names keep that sum correct without writing every fund on every date. Per-account summaries make the per-account chart show accounts instead of funds.
-- (TODO) Delete `parse_fidelity_statement` and `aggregate_fidelity_individual_statements`, plus any imports only they use
-  - Why: their input can't be downloaded anymore.
-- (TODO) Tests for both parsers, using the rows and worked examples in `docs/fidelity-transactions.md`
-  - Why: the worked examples are hand-checked expected values, so tests catch mistakes without real data.
-- (TODO) `src/main.py`: switch the import (line 8) and the two parser calls (lines 41 and 44) to the new parsers, both reading `fidelityTransactions.csv`
-  - Why: every later step (merges, derived series, exports, report, charts) receives the same variables and row shapes, so nothing else in `main.py` changes.
+- (DONE) Decide what happens when `fidelityTransactions.csv` has an account number that isn't in `.env`
+  - Why: those rows would otherwise be skipped, so a new account you forget to add would silently drop out of net worth.
+  - Answer: if errors are present in the code, let them occur for now. I will add support for error handling the more I use this software.
+- (DONE) Pick a test runner: `pytest`
+  - Why: tests on made-up rows are the only way to check the parser without real data. `pytest` is the standard runner, needs one `pip install`, and uses plain `assert`s.
+- (DONE) `docs/fidelity-transactions.md`: switch the rules to funds only, and add the output rows and the old layout
+  - Why: the doc is the spec the parser and its tests follow, and it described cash tracking and a per-format split that this design drops.
+- (TODO) `src/config.py`: replace `RETIREMENT_ACCOUNT_PREFIX` with `FIDELITY_ACCOUNTS` (account number → label), built from every `.env` key shaped `FIDELITY_ACCOUNT_<LABEL>=<account number>`
+  - Why account numbers: one account-name prefix can't match both employers' plans, and account numbers are unique.
+  - Why a key prefix: a new account or employer only needs a new `.env` line, not a code change.
+  - Why labels: outputs show your label instead of Fidelity's account name, so `stats.txt` stops printing the employer's plan name (`src/reporters.py:239`).
+- (DONE) `.env.example`: replace `RETIREMENT_ACCOUNT_PREFIX` with example `FIDELITY_ACCOUNT_` lines (you)
+  - Why: it documents every setting a fresh clone needs. Claude's permission settings block reading `.env.example`, so it can't be edited by Claude.
+- (DONE) Your `.env`: add one `FIDELITY_ACCOUNT_<LABEL>=<account number>` line per Fidelity account and remove `RETIREMENT_ACCOUNT_PREFIX` (you)
+  - Why: the parser needs every account number mapped, and real account numbers stay out of the repo.
+- (TODO) `src/parsers.py`: add `parse_fidelity_transactions(file_path, account_labels)`, following the rules and output in `docs/fidelity-transactions.md`. Output values are rounded like the old parsers' were: 2 decimals for money and prices, 3 for shares
+  - Why one parser: the funds-only rules give the same result on 401k and brokerage rows, so every account goes through one pass with no per-format code.
+  - Why funds only: tracking cash is what requires knowing each account's format, because `Amount ($)` is cash for brokerage rows but fund value for 401k rows. The cost is that money not yet in a fund (a deposit before its buy runs, sale proceeds) isn't counted, and the balance check would show that.
+  - Why the doc holds the rules: the reading of numbers, where prices come from, one row per fund per day, and the output fields are each explained there once, and the tests replay its worked examples. Repeating them here would be a second copy to keep in sync.
+  - Why rounding: the worked examples are 2-decimal values, so the tests can compare exactly, and `main.py` and the reports already assume rounded inputs.
+- (TODO) `src/parsers.py`: delete `parse_fidelity_401k`, `parse_fidelity_statement`, `aggregate_fidelity_individual_statements` (lines 131-307) and `safe_float`, plus imports only they use
+  - Why: the new parser replaces all three, and the statements they read can't be downloaded anymore. `safe_float` is only called by them, so it would be dead code.
+- (TODO) `src/models.py`: update `FidelityTransaction` to the holdings fields the parser writes
+  - Why: it's the type the parser's return value is annotated with. It already lists `price` where the parsers write `price_per_share`, and `beginning_value` goes away.
+- (TODO) `requirements-dev.txt` (`pytest`) and `pytest.ini` (`pythonpath = src`)
+  - Why: the tool itself doesn't need `pytest`. The sources import each other as top-level modules (`from parsers import ...`), so `pytest` needs `src` on the import path.
+- (TODO) `tests/fixtures/fidelityTransactions.csv` holding the doc's made-up rows, and `tests/test_fidelity_parser.py` with two tests: the 401k worked example and the individual-account worked example
+  - Why these two: the worked examples are hand-checked expected values that exercise every documented Action and the one-row-per-day rule. Smaller details are covered by these, so they don't get tests of their own. There's no error handling to test, since input is assumed valid.
+  - Why not `config.py`: importing it reads your real `.env`, which Claude must never run code against.
+- (TODO) `src/main.py`: replace the two parser calls and both merges (lines 40-62) with one `parse_fidelity_transactions` call, and update the import (line 8)
+  - Why: the new parser already returns every account's rows newest first, which is what the merges produced.
+- (TODO) `src/main.py`: remove the per-account-type holdings exports (lines 133-134) and charts (lines 208-209)
+  - Why: those lists no longer exist, and the combined export (line 137) and chart (line 210) already contain every row.
 - (TODO) Run `python src/main.py` on your real data and compare the Fidelity balances with Fidelity's website (you)
-  - Why: it's the final check under "Validation & Testing", and Claude never runs the tool on real data.
-- (TODO) `CLAUDE.md`: update "Parser fragility" and "Data privacy"
-  - Why: they describe the statement layout, the `Price ($)` column and the employer prefix, all of which go away.
-- (TODO) README: update "Setup", "Data Sources", the return % line under "Text Report", and "CSV Exports"
-  - Why: they still describe statement CSVs and the account-name prefix.
-- (TODO) `docs/fidelity-transactions.md`: describe the old layout and say that only the current layout is supported
-  - Why: the doc currently implies any file with this header works, and old-layout rows from a backup would be read with 0 shares and no error.
+  - Why: it's the final check under "Validation & Testing", and Claude never runs the tool on real data. If a balance is off by more than the known limits explain, look for an Action that isn't in the doc and send a masked row of it.
+- (TODO) `CLAUDE.md`: update "Running", "Data privacy", "Architecture" and "Parser fragility"
+  - Why: they describe the statement layout, the `Price ($)` column, the employer prefix, the old Fidelity row shapes, and "no test suite", all of which change.
+- (TODO) README: update "Setup", "Data Sources", "Text Report", "Charts", "CSV Exports", "Validation & Testing" and "Field Reference"
+  - Why: they still describe statement CSVs, the account-name prefix, the per-account-type exports and charts, the removed fields, and tests as planned.
 
 ### Test harness
 Done when the test suite passes using fixtures alone.
