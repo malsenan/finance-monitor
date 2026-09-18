@@ -79,10 +79,10 @@ While working, mark each subtask (DONE) as it's finished.
 
 ## Running
 
-**Never run the code on the current .env, only read it. This repo does not have unit tests yet but it eventually will and you will be able to run those only. If absolutely necessary, copy this code into a tmp folder and create your own sample data to run against and clean up these resources afterwards.**
+**Never run the code on the current .env, only read it. The unit tests (`pytest`) use synthetic fixtures only, and they're the only code you may run. If absolutely necessary, copy this code into a tmp folder and create your own sample data to run against and clean up these resources afterwards.**
 
 - Python sources live in `src/`. Run from the repo root with `python src/main.py`; `config.py` reads `.env` from the repo root.
-- Dependencies are in `requirements.txt` (`matplotlib`, `numpy`). No test suite or linter config yet.
+- Dependencies, including `pytest`, are in `requirements.txt`. Run the tests from the repo root with `pytest`; `pytest.ini` puts `src/` on the import path. Tests read fixtures from `tests/fixtures/` and must never import `config`, which reads the real `.env`. No linter config yet.
 - `config.py` raises at import time if any required `.env` setting is missing, so every module that imports `config` needs a valid `.env`.
 - Output goes to `$FINANCE_DATA_DIR/parsed_data/` (parsed CSVs + `stats.txt`). That directory must already exist.
 - Charts call `plt.show()` and block. They are toggled by the `plot_*` booleans at the top of `main.py`'s `__main__` block. `plot_line_savings_by_month` runs regardless of those flags.
@@ -90,7 +90,7 @@ While working, mark each subtask (DONE) as it's finished.
 
 ## Data privacy
 
-The input CSVs are real personal financial exports stored outside the repo (`FINANCE_DATA_DIR`). The recent "anonymize things" commit moved every personal value (account suffixes, employer name, income, limits) into `.env`. Keep it that way: don't hardcode personal values, account numbers, or sample rows from real data in source, comments, or docstrings.
+The input CSVs are real personal financial exports stored outside the repo (`FINANCE_DATA_DIR`). Every personal value (the credit account suffix, Fidelity account numbers, income, limits) lives in `.env`. Keep it that way: don't hardcode personal values, account numbers, or sample rows from real data in source, comments, or docstrings.
 
 ## Architecture
 
@@ -98,8 +98,8 @@ The pipeline is flat, and `main.py` is the only orchestrator: **parsers → merg
 
 - `parsers.py` turns each bank's export format into lists of plain dicts (typed loosely by `models.py` `TypedDict`s):
   - Bank rows: `{date, account, description, amount, balance}`
-  - Fidelity holding rows: `{date, account, symbol, description, quantity, price_per_share, beginning_value, ending_value, cost_basis}`
-  - Fidelity summary rows: `{date, account, beginning_mkt_value, change_in_investment, ending_mkt_value, dividends_*, total_*}`
+  - Fidelity holding rows: `{date, account, symbol, description, quantity, price_per_share, ending_value, cost_basis}`, one per fund per day it changed
+  - Fidelity summary rows: `{date, account, ending_mkt_value}`, one per account per day it changed
 - `main.py` merges these with `heapq.merge`, then derives more series:
   - `fidelity_transactions`: holdings converted to bank-row shape. `amount` is the change in cost basis since that symbol's previous row, and `balance` is the sum of `ending_value` for that date and account.
   - `cost_bases`: the same shape, but `balance` is the cost basis.
@@ -112,17 +112,15 @@ The pipeline is flat, and `main.py` is the only orchestrator: **parsers → merg
 
 - **Dates are `"%m/%d/%Y"` strings**, not `datetime`s. They get parsed on demand everywhere they are sorted or compared.
 - **Lists are newest-first.** Parsers reverse to this order, and `heapq.merge(..., reverse=True)` depends on it. Code that computes running values iterates `[::-1]` (oldest-first).
-- **Net worth / multi-account balances** come from a `curr_balances` dict keyed by `account`: walk oldest-first, overwrite the latest balance per account, and sum. This pattern appears in `main.py` and `charts.py`. For 401k rows, `account` is `"<plan account> - <fund description>"`, so each fund counts as its own "account".
+- **Net worth / multi-account balances** come from a `curr_balances` dict keyed by `account`: walk oldest-first, overwrite the latest balance per account, and sum. This pattern appears in `main.py` and `charts.py`. For Fidelity holding rows, `account` is `"<label> - <fund>"` (the label comes from `.env`), so each fund counts as its own "account".
 - Credit balances aren't in the export. `aggregate_credit_files` computes them as a cumulative sum starting from 0.
 - The `Net worth:` line at the top of `stats.txt` only covers checking + savings + credit. It excludes Fidelity.
 
 ### Parser fragility
 
-The BofA and Fidelity exports have no stable schema, so the parsers rely on fixed row offsets:
+The exports have no stable schema:
 
-- **Checking/savings:** summary on rows 1–4, transaction header on row 6. Whether the account is `savings` or `checking` is inferred from the filename.
-- **Fidelity statements (`Statement<MMDDYYYY>.csv`):** the date comes from the filename. Holdings start at line 10 and repeat every 5 lines. The owning account number is read from `line_num - 2` and mapped through the summary rows.
-- **401k (`parse_fidelity_401k`):** only rows whose `Account` starts with `RETIREMENT_ACCOUNT_PREFIX` and whose `Action == "Contributions"` are kept. Share quantity is read from the `Price ($)` column, and price is computed as `Amount / Price`. That reflects the column layout of the actual export, so don't "fix" it without checking a real file.
-- `safe_float` returns `0` (not `None`) for blank or non-numeric values.
+- **Checking/savings:** the parser relies on fixed row offsets: summary on rows 1–4, transaction header on row 6. Whether the account is `savings` or `checking` is inferred from the filename.
+- **Fidelity (`parse_fidelity_transactions`):** reads `fidelityTransactions.csv` by column name. `docs/fidelity-transactions.md` is the spec: row meanings, rules, output and worked examples, which `tests/test_fidelity_parser.py` replays. Only the current export layout is supported, and the parser assumes valid input (no error handling). Account numbers map to labels through `FIDELITY_ACCOUNT_<LABEL>=<account number>` settings in `.env`.
 
 If a parse breaks after a new download, suspect a change in the export layout before suspecting a logic bug.

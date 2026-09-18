@@ -42,8 +42,8 @@ PARSED_DATA_DIR = os.path.join(DATA_DIR, "parsed_data")
 # Filename suffix identifying the credit account's exported CSVs (ex: "_1234.csv")
 CREDIT_FILE_SUFFIX = _require("CREDIT_FILE_SUFFIX")
 
-# Account-name prefix the 401k provider uses to label employer plan rows
-RETIREMENT_ACCOUNT_PREFIX = _require("RETIREMENT_ACCOUNT_PREFIX")
+# Fidelity account number -> label, from every FIDELITY_ACCOUNT_<LABEL>=<account number> setting
+FIDELITY_ACCOUNTS = {number: key.removeprefix("FIDELITY_ACCOUNT_") for key, number in os.environ.items() if key.startswith("FIDELITY_ACCOUNT_")}
 
 # Gross annual income, used as the savings rate denominator
 ANNUAL_INCOME = float(_require("ANNUAL_INCOME"))

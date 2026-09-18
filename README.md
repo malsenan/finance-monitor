@@ -23,7 +23,7 @@ cp .env.example .env
 ```
 
 Then edit `.env` and fill in your own values — the data directory, the filename suffix
-identifying your credit account's exports, your 401k plan's account-name prefix, your
+identifying your credit account's exports, a label for each Fidelity account number, your
 annual income, and your monthly spending limits. Every setting is documented inline in
 `.env.example`. Real environment variables override the file, so nothing personal needs
 to be written to disk if you would rather export them in your shell.
@@ -35,8 +35,7 @@ Before the first run, create a `parsed_data` folder inside your `FINANCE_DATA_DI
 - **BofA Checking** — transaction history CSV
 - **BofA Savings** — transaction history CSV
 - **BofA Credit** — one or more transaction CSVs aggregated from a directory
-- **Fidelity Individual / Roth IRA** — monthly statement CSVs aggregated from a directory (holdings: symbol, quantity, price, beginning value, ending value, cost basis)
-- **Fidelity 401k** — transaction history CSV (via NetBenefits)
+- **Fidelity** (401k plans, Roth IRA, individual) — one transaction history CSV covering every account (see `docs/fidelity-transactions.md`)
 
 # How to Update Financial Files
 
@@ -107,7 +106,7 @@ Generated on every run. Safe to feed directly into an AI model — contains no a
 - **Last N transactions** across checking, savings, and credit — side-by-side date-sorted table showing description, amount, and running balance per account
 - **All transactions since a given month** — same side-by-side format, from a start month typed into `src/main.py`
 - **Top N recurring transactions per account** — grouped by (description, amount), sorted by frequency; shows count, earliest date, and latest date — useful for spotting subscriptions or suspicious charges
-- **Return % per Fidelity holding** — one row per (symbol, account) using the most recent statement:
+- **Return % per Fidelity holding** — one row per (symbol, account) using that fund's most recent row:
   - Unrealized return %: `(ending_value - cost_basis) / cost_basis × 100`
   - Current market value, cost basis, and gain/loss in dollars
   - As-of date
@@ -129,7 +128,7 @@ Charts open in pop-up windows. Most are switched on by the `plot_balances`, `plo
 **Fidelity / Investments**
 - Total Fidelity portfolio value over time (all accounts combined)
 - Fidelity portfolio value per account over time (Roth IRA vs. individual vs. 401k as separate lines)
-- Per-symbol holdings over time — one line per ticker, plotted separately for individual account, 401k, and combined
+- Per-fund holdings over time — market value and cost basis for every fund in every account, on one chart
 
 ## CSV Exports
 
@@ -137,15 +136,15 @@ Saves parsed versions of every data source to `$FINANCE_DATA_DIR/parsed_data/`, 
 - Credit, checking, savings transactions
 - All transactions combined
 - Bank account summaries
-- Fidelity holdings, 401k transactions, Fidelity statement summaries
+- Fidelity holdings (with unrealized gains), Fidelity transactions, Fidelity account summaries
 
 ## Validation & Testing
 
 Every check that confirms the tool's numbers, current and planned. Add new suites and harnesses here.
 
 - **Balance validation** (runs every time) — `validate_balance` in `src/validator.py` starts from the oldest checking and savings balance, adds each transaction's amount, and checks the result against each row's running balance. On a mismatch it prints `MAJOR ALERT` instead of stopping.
-- **Unit tests** (planned) — run against synthetic fixtures only, never real data. See the "Test harness" ticket.
-- **Fidelity parser tests** (planned) — replay the made-up rows in `docs/fidelity-transactions.md` and expect the numbers in its worked examples. See the "Rewrite Fidelity parsing" ticket.
+- **Unit tests** — run `pytest` from the repo root. They use synthetic fixtures under `tests/fixtures/` only, never real data. Tests for the BofA parsers, reporters, validator and exporters are still planned (see the "Test harness" ticket).
+- **Fidelity parser tests** — `tests/test_fidelity_parser.py` replays the made-up rows in `docs/fidelity-transactions.md` and expects the numbers in its worked examples.
 - **Fidelity balances vs. real balances** (manual, planned) — after everything's been implemented, my ultimate validation test for Fidelity will be seeing the calculated net balances match the actual net balances when I run the tool on my actual data.
 
 ## Plan
@@ -201,7 +200,7 @@ Not changing: `charts.py`, `reporters.py`, `exporters.py`, `validator.py`, and `
   - Why: tests on made-up rows are the only way to check the parser without real data. `pytest` is the standard runner, needs one `pip install`, and uses plain `assert`s.
 - (DONE) `docs/fidelity-transactions.md`: switch the rules to funds only, and add the output rows and the old layout
   - Why: the doc is the spec the parser and its tests follow, and it described cash tracking and a per-format split that this design drops.
-- (TODO) `src/config.py`: replace `RETIREMENT_ACCOUNT_PREFIX` with `FIDELITY_ACCOUNTS` (account number → label), built from every `.env` key shaped `FIDELITY_ACCOUNT_<LABEL>=<account number>`
+- (DONE) `src/config.py`: replace `RETIREMENT_ACCOUNT_PREFIX` with `FIDELITY_ACCOUNTS` (account number → label), built from every `.env` key shaped `FIDELITY_ACCOUNT_<LABEL>=<account number>`
   - Why account numbers: one account-name prefix can't match both employers' plans, and account numbers are unique.
   - Why a key prefix: a new account or employer only needs a new `.env` line, not a code change.
   - Why labels: outputs show your label instead of Fidelity's account name, so `stats.txt` stops printing the employer's plan name (`src/reporters.py:239`).
@@ -209,29 +208,31 @@ Not changing: `charts.py`, `reporters.py`, `exporters.py`, `validator.py`, and `
   - Why: it documents every setting a fresh clone needs. Claude's permission settings block reading `.env.example`, so it can't be edited by Claude.
 - (DONE) Your `.env`: add one `FIDELITY_ACCOUNT_<LABEL>=<account number>` line per Fidelity account and remove `RETIREMENT_ACCOUNT_PREFIX` (you)
   - Why: the parser needs every account number mapped, and real account numbers stay out of the repo.
-- (TODO) `src/parsers.py`: add `parse_fidelity_transactions(file_path, account_labels)`, following the rules and output in `docs/fidelity-transactions.md`. Output values are rounded like the old parsers' were: 2 decimals for money and prices, 3 for shares
+- (DONE) `src/parsers.py`: add `parse_fidelity_transactions(file_path, account_labels)`, following the rules and output in `docs/fidelity-transactions.md`. Output values are rounded: 2 decimals for money and prices, 3 for shares
   - Why one parser: the funds-only rules give the same result on 401k and brokerage rows, so every account goes through one pass with no per-format code.
   - Why funds only: tracking cash is what requires knowing each account's format, because `Amount ($)` is cash for brokerage rows but fund value for 401k rows. The cost is that money not yet in a fund (a deposit before its buy runs, sale proceeds) isn't counted, and the balance check would show that.
   - Why the doc holds the rules: the reading of numbers, where prices come from, one row per fund per day, and the output fields are each explained there once, and the tests replay its worked examples. Repeating them here would be a second copy to keep in sync.
   - Why rounding: the worked examples are 2-decimal values, so the tests can compare exactly, and `main.py` and the reports already assume rounded inputs.
-- (TODO) `src/parsers.py`: delete `parse_fidelity_401k`, `parse_fidelity_statement`, `aggregate_fidelity_individual_statements` (lines 131-307) and `safe_float`, plus imports only they use
+- (DONE) `src/parsers.py`: delete `parse_fidelity_401k`, `parse_fidelity_statement`, `aggregate_fidelity_individual_statements` (lines 131-307) and `safe_float`, plus imports only they use
   - Why: the new parser replaces all three, and the statements they read can't be downloaded anymore. `safe_float` is only called by them, so it would be dead code.
-- (TODO) `src/models.py`: update `FidelityTransaction` to the holdings fields the parser writes
+- (DONE) `src/models.py`: update `FidelityTransaction` to the holdings fields the parser writes
   - Why: it's the type the parser's return value is annotated with. It already lists `price` where the parsers write `price_per_share`, and `beginning_value` goes away.
-- (TODO) `requirements-dev.txt` (`pytest`) and `pytest.ini` (`pythonpath = src`)
-  - Why: the tool itself doesn't need `pytest`. The sources import each other as top-level modules (`from parsers import ...`), so `pytest` needs `src` on the import path.
-- (TODO) `tests/fixtures/fidelityTransactions.csv` holding the doc's made-up rows, and `tests/test_fidelity_parser.py` with two tests: the 401k worked example and the individual-account worked example
+- (DONE) `pytest` in `requirements.txt`, `pytest.ini` (`pythonpath = src`), and `.pytest_cache/` in `.gitignore`
+  - Why one requirements file: the tool has one developer, who is also its only user, so a separate dev requirements file isn't needed.
+  - Why `pytest.ini`: the sources import each other as top-level modules (`from parsers import ...`), so `pytest` needs `src` on the import path.
+  - Why `.gitignore`: `pytest` creates `.pytest_cache/` in the repo root on every run.
+- (DONE) `tests/fixtures/fidelityTransactions.csv` holding the doc's made-up rows, and `tests/test_fidelity_parser.py` with two tests: the 401k worked example and the individual-account worked example
   - Why these two: the worked examples are hand-checked expected values that exercise every documented Action and the one-row-per-day rule. Smaller details are covered by these, so they don't get tests of their own. There's no error handling to test, since input is assumed valid.
   - Why not `config.py`: importing it reads your real `.env`, which Claude must never run code against.
-- (TODO) `src/main.py`: replace the two parser calls and both merges (lines 40-62) with one `parse_fidelity_transactions` call, and update the import (line 8)
+- (DONE) `src/main.py`: replace the two parser calls and both merges (lines 40-62) with one `parse_fidelity_transactions` call, and update the import (line 8)
   - Why: the new parser already returns every account's rows newest first, which is what the merges produced.
-- (TODO) `src/main.py`: remove the per-account-type holdings exports (lines 133-134) and charts (lines 208-209)
+- (DONE) `src/main.py`: remove the per-account-type holdings exports (lines 133-134) and charts (lines 208-209)
   - Why: those lists no longer exist, and the combined export (line 137) and chart (line 210) already contain every row.
 - (TODO) Run `python src/main.py` on your real data and compare the Fidelity balances with Fidelity's website (you)
   - Why: it's the final check under "Validation & Testing", and Claude never runs the tool on real data. If a balance is off by more than the known limits explain, look for an Action that isn't in the doc and send a masked row of it.
-- (TODO) `CLAUDE.md`: update "Running", "Data privacy", "Architecture" and "Parser fragility"
+- (DONE) `CLAUDE.md`: update "Running", "Data privacy", "Architecture" and "Parser fragility"
   - Why: they describe the statement layout, the `Price ($)` column, the employer prefix, the old Fidelity row shapes, and "no test suite", all of which change.
-- (TODO) README: update "Setup", "Data Sources", "Text Report", "Charts", "CSV Exports", "Validation & Testing" and "Field Reference"
+- (DONE) README: update "Setup", "Data Sources", "Text Report", "Charts", "CSV Exports", "Validation & Testing" and "Field Reference"
   - Why: they still describe statement CSVs, the account-name prefix, the per-account-type exports and charts, the removed fields, and tests as planned.
 
 ### Test harness
@@ -297,15 +298,21 @@ Dropped: the offline local-AI health check, startup on login, and the rest of th
 | `balance`     | Running balance of the account
 
 ### Fidelity Holdings
-- Objects: `fidelity_401k_holdings`, `fidelity_individual_holdings`, `all_fidelity_holdings`
+- Objects: `all_fidelity_holdings` (one row per fund per day it changed; see `docs/fidelity-transactions.md`)
 | Field         | Description
 |---------------|-------------
-| `date`            | Date of transaction
-| `account`         | Account tied to transaction
-| `symbol`          | Stock symbol
-| `description`     | Description of the transaction
-| `quantity`        | Number of shares owned
-| `price_per_share` | Current price per share at time of transaction
-| `beginning_value` | Value of all shares at start of period
-| `ending_value`    | Value of all shares at end of period
-| `cost_basis`      | Total cash paid for all shares
+| `date`            | Day the fund changed
+| `account`         | `<label> - <fund>`, with the label from `.env`
+| `symbol`          | Ticker, or the fund's name for 401k funds
+| `description`     | The day's last Action that moved the fund's shares
+| `quantity`        | Shares held at the end of the day
+| `price_per_share` | Latest known price per share
+| `ending_value`    | Shares × price
+| `cost_basis`      | Money paid for the shares still held (average cost)
+
+## Loose ends
+
+Small known gaps that aren't worth code yet. Add to this list when a review turns one up, and remove entries once they're fixed or no longer apply.
+
+- **Unknown Fidelity Actions are silent.** The parser has no error handling (input is assumed valid), so an Action that isn't in `docs/fidelity-transactions.md` with a nonzero `Quantity` gets replayed by the sign rules with no signal. An unknown account number still fails loudly with a `KeyError` naming the number. Before trusting real-data balances, list the distinct `Action` values in `fidelityTransactions.csv` and confirm they're all in the doc.
+- **A fee before a fund's first contribution divides by zero.** The average-cost step divides by shares held. It can't happen in the sample rows, and on real data it would raise a loud `ZeroDivisionError` rather than produce a wrong number. Not worth code unless it fires.

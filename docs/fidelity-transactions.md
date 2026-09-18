@@ -4,7 +4,7 @@ The only Fidelity input is `$FINANCE_DATA_DIR/fidelity/fidelityTransactions.csv`
 
 **Every row in this document is made up.** Each one copies the layout of a real export row, but the names, account numbers, dates and amounts are invented (see "Data privacy" in `CLAUDE.md`).
 
-**Status:** this describes the planned `parse_fidelity_transactions` (see the "Rewrite Fidelity parsing" ticket in the README). `src/parsers.py` doesn't work this way yet.
+**Status:** implemented by `parse_fidelity_transactions` in `src/parsers.py`. `tests/test_fidelity_parser.py` replays the sample rows below (`tests/fixtures/fidelityTransactions.csv`) and checks the worked examples.
 
 ## Columns
 
@@ -16,7 +16,7 @@ Run Date,Account,Account Number,Action,Symbol,Description,Type,Price ($),Quantit
 - `Commission ($)`, `Fees ($)` and `Accrued Interest ($)` have been blank in every row seen so far. Fees come as their own rows instead.
 - Fields containing a comma are quoted (`"EMPLOYER A, INC 401(K) PROFIT SHARING PLAN"`), and negative numbers often are too (`"-0.004"`). `csv.DictReader` handles both.
 - A blank field is written either as nothing or as `""`. Both read as an empty string.
-- `Quantity` has 3 decimal places. Read numbers with `float`, not `safe_float`: `safe_float` rounds to 2 decimals (turning `-0.004` into `0`) and turns unreadable values into `0` without an error.
+- `Quantity` has 3 decimal places, so numbers are read with plain `float` and only rounded on output. Rounding them on the way in would turn a `-0.004` share fee into `0`.
 
 ## Old layout (not supported)
 
@@ -185,7 +185,7 @@ Input that breaks these shows up as an ordinary Python error or as wrong numbers
 
 After each day's rows, the parser writes:
 
-- **One holdings row per fund that changed that day:** `date`, `account` (`<label> - <fund>`), `symbol` (the fund), `description` (the day's last Action for that fund), `quantity`, `price_per_share`, `ending_value`, `cost_basis`.
+- **One holdings row per fund that changed that day:** `date`, `account` (`<label> - <fund>`), `symbol` (the fund), `description` (the day's last Action that moved the fund's shares), `quantity`, `price_per_share`, `ending_value`, `cost_basis`.
 - **One summary row per account that changed that day:** `date`, `account` (the label), `ending_mkt_value` (the account's value).
 
 Values are rounded on output: 2 decimals for money and prices, 3 for shares. Both lists are newest first. Labels come from `.env`: `FIDELITY_ACCOUNT_<LABEL>=<account number>`, so outputs never show Fidelity's account names or numbers.

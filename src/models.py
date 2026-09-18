@@ -14,7 +14,6 @@ class FidelityTransaction(TypedDict):
     symbol: str
     description: str
     quantity: float
-    price: float 
-    beginning_value: float
+    price_per_share: float
     ending_value: float
     cost_basis: float

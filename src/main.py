@@ -5,7 +5,7 @@ from typing import List
 from copy import deepcopy
 
 import config
-from parsers import aggregate_credit_files, parse_checking_or_savings_file, parse_fidelity_401k, aggregate_fidelity_individual_statements
+from parsers import aggregate_credit_files, parse_checking_or_savings_file, parse_fidelity_transactions
 from exporters import save_to_csv
 from reporters import (
     log_account_stats_between,
@@ -37,29 +37,8 @@ if __name__ == "__main__":
     checking_summary, checking_transactions = parse_checking_or_savings_file(os.path.join(config.DATA_DIR, 'bofa', 'debit', 'checkingTransactions.csv'))
     savings_summary, savings_transactions = parse_checking_or_savings_file(os.path.join(config.DATA_DIR, 'bofa', 'savings', 'savingsTransactions.csv'))
 
-    # Parse Fidelity 401k transactions
-    fidelity_401k_summaries, fidelity_401k_holdings = parse_fidelity_401k(os.path.join(config.DATA_DIR, 'fidelity', 'fidelityTransactions.csv'), config.RETIREMENT_ACCOUNT_PREFIX)
-
-    # Parse Fidelity investment statements
-    fidelity_individual_summaries, fidelity_individual_holdings = aggregate_fidelity_individual_statements(os.path.join(config.DATA_DIR, 'fidelity'))
-
-    # Aggregate 401k and individual fidelity data
-    all_fidelity_summaries = list(
-        heapq.merge(
-            fidelity_401k_summaries,
-            fidelity_individual_summaries,
-            key=lambda t: datetime.strptime(t["date"], "%m/%d/%Y"),
-            reverse=True
-        )
-    )
-    all_fidelity_holdings = list(
-        heapq.merge(
-            fidelity_401k_holdings,
-            fidelity_individual_holdings,
-            key=lambda t: datetime.strptime(t["date"], "%m/%d/%Y"),
-            reverse=True
-        )
-    )
+    # Parse Fidelity transactions for every account (401k plans, Roth IRA, individual)
+    all_fidelity_summaries, all_fidelity_holdings = parse_fidelity_transactions(os.path.join(config.DATA_DIR, 'fidelity', 'fidelityTransactions.csv'), config.FIDELITY_ACCOUNTS)
 
     # For Fidelity, create separate list that will also hold unrealized_gains and net_worth to save to csv
     enhanced_fidelity_holdings = deepcopy(all_fidelity_holdings)
@@ -130,8 +109,6 @@ if __name__ == "__main__":
     save_to_csv(checking_summary + savings_summary, os.path.join(config.PARSED_DATA_DIR, 'bankAccountSummaries.csv'))
 
     # Save the Fidelity data to CSV files
-    save_to_csv(fidelity_individual_holdings, os.path.join(config.PARSED_DATA_DIR, 'parsedFidelityIndividiual.csv'))
-    save_to_csv(fidelity_401k_holdings, os.path.join(config.PARSED_DATA_DIR, 'parsedFidelity401k.csv'))
     save_to_csv(fidelity_transactions, os.path.join(config.PARSED_DATA_DIR, 'parsedFidelityTransactions.csv'))
     save_to_csv(all_fidelity_summaries, os.path.join(config.PARSED_DATA_DIR, 'parsedFidelitySummaries.csv'))
     save_to_csv(enhanced_fidelity_holdings, os.path.join(config.PARSED_DATA_DIR, 'parsedFidelityHoldings.csv'))
@@ -205,6 +182,4 @@ if __name__ == "__main__":
         plot_line_fidelity_per_account(all_fidelity_summaries)
 
         #Plots each symbol (ex: FXAIX) separately
-        plot_line_fidelity_holdings(fidelity_individual_holdings)
-        plot_line_fidelity_holdings(fidelity_401k_holdings)
         plot_line_fidelity_holdings(all_fidelity_holdings)
