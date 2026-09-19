@@ -183,7 +183,7 @@ def plot_line_fidelity_portfolio(summaries: list):
     date so the chart shows the combined portfolio value rather than per-account values.
 
     Parameters:
-    - summaries: List of account summary dicts from parse_fidelity_file / aggregate_fidelity_files.
+    - summaries: List of account summary dicts from fidelity summaries
     """
      # Convert date strings to datetime objects for proper x-axis spacing
     dates = [] # x-axis: time
