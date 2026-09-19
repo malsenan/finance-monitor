@@ -68,9 +68,9 @@ The TODO list in `README.md` is the project's ticket tracker. Before changing an
   - Explain in detail why the task needs to be done, and why each of its subtasks needs to be done.
   - Stop there. Start the code only after the user has reviewed the ticket and it has been pushed.
 - If a task does exist:
-  - If it's a simple task, implement it. That simple.
+  - If it's a simple task, just implement it. The task is usually a solved proble, just use best judgement. That simple.
   - If it's a large task, audit it. See if it's broken down enough, if it's descriptive enough, if any questions need to be answered before it gets implemented, etc.
-  - Then edit the task to be descriptive enough to start implementing. 
+  - Then edit the task to be descriptive enough to start implementing, following the guidelines described at the top of the TODO list. Most of the tasks are already too detailed; stop that habit
   - Stop there. Start the code only after the user has reviewed the ticket and it has been pushed.
 While working, mark each subtask (DONE) as it's finished.
 

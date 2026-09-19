@@ -163,7 +163,11 @@ Direction, decided 2026-09-12:
 
 ## TODO
 
-**Tickets are in order of completeness: work top to bottom, and insert new tickets wherever they belong. Mark each subtask (TODO) or (DONE). Every new ticket should explain why the task is needed, and each of its subtasks says why that step is needed. NEVER reference line numbers, ALWAYS reference by file, class, module, and method.**
+#### Guidelines
+- Everything should be simple. Old tickets follow bad habits by referencing line numbers and literally specifying exactly what to. The repo is basic and small, keep the tickets the same by only describing the overall changes needed and why.
+- Tickets are in order of completeness: work top to bottom, and insert new tickets wherever they belong. 
+- Mark each task and subtask (TODO) or (DONE), mark tasks (x subtasks left) if implementation mostly finished.
+- Every new task and subtask should explain why the it is needed. 
 
 ### 1. Cleanup (DONE)
 Done when a fresh clone needs only `pip install -r requirements.txt` and a filled-in `.env`, and the README matches the code.
