@@ -84,7 +84,7 @@ While working, mark each subtask (DONE) as it's finished.
 - Python sources live in `src/`. Run from the repo root with `python src/main.py`; `config.py` reads `.env` from the repo root.
 - Dependencies, including `pytest`, are in `requirements.txt`. Run the tests from the repo root with `pytest`; `pytest.ini` puts `src/` on the import path. Tests read fixtures from `tests/fixtures/` and must never import `config`, which reads the real `.env`. No linter config yet.
 - `config.py` raises at import time if any required `.env` setting is missing, so every module that imports `config` needs a valid `.env`.
-- Output goes to `$FINANCE_DATA_DIR/parsed_data/` (parsed CSVs + `stats.txt`). That directory must already exist.
+- Output goes to `$FINANCE_DATA_DIR/parsed_data/` (parsed CSVs + `stats.txt`). That directory must already exist. Right after `stats.txt` is written, `main.py` copies `parsed_data/` into a new `$FINANCE_DATA_DIR/old_parsed_data/YYYY-MM-DD_HH-MM-SS/` folder. Backups pile up until they're deleted by hand.
 - Charts call `plt.show()` and block. They are toggled by the `plot_*` booleans at the top of `main.py`'s `__main__` block. `plot_line_savings_by_month` runs regardless of those flags.
 - The date ranges passed to the `stats.txt` reporters (e.g. `log_account_stats_between(..., 2, 2026, 3, 2026)`) are hardcoded in `main.py` and need editing by hand.
 

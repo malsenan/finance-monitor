@@ -1,5 +1,6 @@
 import heapq
 import os
+import shutil
 from datetime import datetime
 from typing import List
 from copy import deepcopy
@@ -142,6 +143,9 @@ if __name__ == "__main__":
     # Log the human readable data
     with open(os.path.join(config.PARSED_DATA_DIR, 'stats.txt'), 'w') as stats_file:
         stats_file.write('\n'.join(lines))
+
+    # Back up this run's output into a folder named by when it was produced
+    shutil.copytree(config.PARSED_DATA_DIR, os.path.join(config.OLD_PARSED_DATA_DIR, datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
 
     if plot_balances:
         # Plot net worth over time (checking + savings - credit)

@@ -38,6 +38,8 @@ _load_env_file(_ENV_PATH)
 DATA_DIR = _require("FINANCE_DATA_DIR")
 # Where the parsed CSVs and stats.txt are written
 PARSED_DATA_DIR = os.path.join(DATA_DIR, "parsed_data")
+# Where each run's output is copied, into a new YYYY-MM-DD_HH-MM-SS folder per run
+OLD_PARSED_DATA_DIR = os.path.join(DATA_DIR, "old_parsed_data")
 
 # Filename suffix identifying the credit account's exported CSVs (ex: "_1234.csv")
 CREDIT_FILE_SUFFIX = _require("CREDIT_FILE_SUFFIX")

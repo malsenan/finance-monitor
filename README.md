@@ -94,7 +94,10 @@ Note: Some of the strings in the headers don't render properly in markdown view 
     - Headers for employer accounts (401k): Date,Investment,Transaction Type,Shares/Unit,Amount ($)
     - Should this be used over Accounts_History.csv? Should I generate this file separately for every account?
 
-## Text Report (`stats.txt`)
+
+## Exports
+
+### Text Report (`stats.txt`)
 
 Generated on every run. Safe to feed directly into an AI model — contains no account numbers or personal identifiers.
 
@@ -111,7 +114,7 @@ Generated on every run. Safe to feed directly into an AI model — contains no a
   - Current market value, cost basis, and gain/loss in dollars
   - As-of date
 
-## Charts
+### Charts
 
 Charts open in pop-up windows. Most are switched on by the `plot_balances`, `plot_income_vs_spending` and `plot_fidelity` flags at the top of `src/main.py`'s `__main__` block, which are all off by default. The monthly savings rate chart is the exception: it always runs.
 
@@ -130,13 +133,17 @@ Charts open in pop-up windows. Most are switched on by the `plot_balances`, `plo
 - Fidelity portfolio value per account over time (Roth IRA vs. individual vs. 401k as separate lines)
 - Per-fund holdings over time — market value and cost basis for every fund in every account, on one chart
 
-## CSV Exports
+### CSV Exports
 
 Saves parsed versions of every data source to `$FINANCE_DATA_DIR/parsed_data/`, which must already exist:
 - Credit, checking, savings transactions
 - All transactions combined
 - Bank account summaries
 - Fidelity holdings (with unrealized gains), Fidelity transactions, Fidelity account summaries
+
+### Backups
+
+Once these files and `stats.txt` are written, every run copies `parsed_data/` into a new `$FINANCE_DATA_DIR/old_parsed_data/YYYY-MM-DD_HH-MM-SS/` folder, named by when the run happened, so each run's output is kept. Backups are never deleted automatically; delete old ones by hand.
 
 ## Validation & Testing
 
@@ -238,7 +245,7 @@ Not changing: `charts.py`, `reporters.py`, `exporters.py`, `validator.py`, and `
 - (DONE) README: update "Setup", "Data Sources", "Text Report", "Charts", "CSV Exports", "Validation & Testing" and "Field Reference"
   - Why: they still describe statement CSVs, the account-name prefix, the per-account-type exports and charts, the removed fields, and tests as planned.
 
-### Back up the previous output before each run
+### Back up the output after each run
 **Why:** Every run of `src/main.py` overwrites the CSVs and `stats.txt` in `$FINANCE_DATA_DIR/parsed_data/`, so the previous run's numbers are lost. Keeping a copy lets me not only preserve important files just in case the tool breaks, but also lets me keep a truthful history of records.
 
 Done when a run writes its new output to `parsed_data/` then IMMEDIATELY copies the new output it just made into a new `$FINANCE_DATA_DIR/old_parsed_data/YYYY-MM-DD_HH-MM-SS/` folder.
@@ -248,13 +255,13 @@ Not included: deleting old backups.
 - (DONE) Decide which date and time names each backup folder. Format decided: `YYYY-MM-DD_HH-MM-SS`
   - Why the date AND time: for debugging purposes.
   - Why that format: folder names sort by date, and it avoids `:`, which Windows doesn't allow in file names.
-- (TODO) `src/config.py`: add `OLD_PARSED_DATA_DIR`, the `old_parsed_data` folder inside `FINANCE_DATA_DIR`, next to `PARSED_DATA_DIR`
+- (DONE) `src/config.py`: add `OLD_PARSED_DATA_DIR`, the `old_parsed_data` folder inside `FINANCE_DATA_DIR`, next to `PARSED_DATA_DIR`
   - Why: `config.py` defines where output goes, so the backup location belongs there too.
-- (TODO) `src/main.py`: immediately after the last file is written to and before any other logic, copy `parsed_data/` into a new `old_parsed_data/YYYY-MM-DD_HH-MM-SS/` folder with `shutil.copytree`
+- (DONE) `src/main.py`: immediately after the last file is written to and before any other logic, copy `parsed_data/` into a new `old_parsed_data/YYYY-MM-DD_HH-MM-SS/` folder with `shutil.copytree`
   - Why `shutil.copytree`: one standard-library call copies every file and creates `old_parsed_data/` the first time.
-- (TODO) Run `python src/main.py` on your real data and check that `old_parsed_data/` has a new folder holding the files `parsed_data/` had before the run (you)
+- (DONE) Run `python src/main.py` on your real data and check that `old_parsed_data/` has a new folder holding the same files the run just wrote to `parsed_data/` (you)
   - Why: tests can't import `main.py` without reading your `.env`, so this is checked by hand. It can be the same run as the Fidelity ticket's real-data check.
-- (TODO) `CLAUDE.md` "Running" and README "CSV Exports": mention the backup folder
+- (DONE) `CLAUDE.md` "Running" and README "CSV Exports": mention the backup folder
   - Why: both describe where output goes, and backups pile up until they're deleted by hand.
 
 ### Test harness
