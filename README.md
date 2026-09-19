@@ -264,6 +264,20 @@ Not included: deleting old backups.
 - (DONE) `CLAUDE.md` "Running" and README "CSV Exports": mention the backup folder
   - Why: both describe where output goes, and backups pile up until they're deleted by hand.
 
+### Drop the summary section from checking and savings files
+**Why:** `checkingTransactions.csv` and `savingsTransactions.csv` start with an account summary that has its own column names, above the transaction table, so each file holds two tables. The parser reads both by fixed row numbers (`src/parsers.py:33`, `src/parsers.py:45`). Without the summary, each file is a plain CSV with one header row that `csv.DictReader` reads directly.
+
+Done when both files start with the `Date,Description,Amount,Running Bal.` header and nothing in the tool reads or writes the summary.
+
+- (TODO) Delete the lines above the `Date,Description,Amount,Running Bal.` header in your real `checkingTransactions.csv` and `savingsTransactions.csv` (you)
+  - Why: the new parser reads the header from the first line, and Claude never edits real data.
+- (TODO) `src/parsers.py`: `parse_checking_or_savings_file` reads the file with `csv.DictReader` and returns only the transactions
+  - Why: with one header row, the row offsets and the summary list have no use.
+- (TODO) `src/main.py`: drop `checking_summary` and `savings_summary` (lines 38-39) and the `bankAccountSummaries.csv` export (line 110). The `Net worth:` line takes the checking and savings balances from each account's newest row instead (lines 138-139)
+  - Why: these are the only places the summary is used. The newest row's running balance is the account's current balance, and credit's balance is already taken that way (line 140).
+- (TODO) README "How to Update Financial Files" and "CSV Exports", and `CLAUDE.md` "Parser fragility": say the files start at the header row, that pasted downloads leave out the summary, and remove the summaries export
+  - Why: they describe the summary rows, the row offsets and `bankAccountSummaries.csv`, which no longer exist.
+
 ### Test harness
 Done when the test suite passes using fixtures alone.
 - (TODO) Provide one masked sample of each remaining export type (checking, savings, credit), kept outside the repo
