@@ -274,7 +274,10 @@ Not included: deleting old backups.
   - Why: The way we're grabbing .env files is really ugly and easily replaced by a package, especially because a requirements.txt file is now being used
 - (TODO) Replace all the os.path.join in main.py with variables in config.py
   - Why: I feel like config is where shit like this should live and main.py has been looking ugly
-- (TODO) Yo Claude, anything else look ugly with the environment variable stuff and os path stuff? Anything look ugly anywhere in general so far?
+- (TODO) Replace any other pathing stuff for clean config responsibilities
+  - Why: main.py and config.py might not be the only places needing paths defined, so change elsewhere too.
+- (TODO) Test the tool on my real data
+  - Why: Make sure nothing is broken
 
 ### 6. Drop the summary table from checking and savings files and code (TODO)
 **Why:** `checkingTransactions.csv` and `savingsTransactions.csv` used to start with an account summary that has its own column names, above the transaction table, so each file holds two tables. That top table is not only hard to keep updated, but is also worthless because literally all of the data is parsed anyway. With the summary, the parser reads both tables by fixed row numbers. Without the summary, each file is a plain CSV with one header row that `csv.DictReader` reads directly.
