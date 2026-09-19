@@ -228,12 +228,34 @@ Not changing: `charts.py`, `reporters.py`, `exporters.py`, `validator.py`, and `
   - Why: the new parser already returns every account's rows newest first, which is what the merges produced.
 - (DONE) `src/main.py`: remove the per-account-type holdings exports (lines 133-134) and charts (lines 208-209)
   - Why: those lists no longer exist, and the combined export (line 137) and chart (line 210) already contain every row.
+- (TODO) `docs/fidelity-transactions.md`: add the Actions found in your real file, each with a made-up sample row: `Dividend`, `REVENUE CREDIT` and `ADMINISTRATIVE FEES` (401k), and `YOU SOLD` (brokerage)
+  - Why: the doc is the spec, so it should cover every Action in the file. Replaying your sample rows showed the rules already handle `Dividend`, `REVENUE CREDIT` and `YOU SOLD`: dividends and revenue credits add shares and cost basis without changing the price, and a sale removes shares along with their average cost. Only the doc changes.
+  - Needs: one masked `ADMINISTRATIVE FEES` row (you), to confirm whether its `Quantity` removes shares like the other fees or is 0.
 - (TODO) Run `python src/main.py` on your real data and compare the Fidelity balances with Fidelity's website (you)
   - Why: it's the final check under "Validation & Testing", and Claude never runs the tool on real data. If a balance is off by more than the known limits explain, look for an Action that isn't in the doc and send a masked row of it.
 - (DONE) `CLAUDE.md`: update "Running", "Data privacy", "Architecture" and "Parser fragility"
   - Why: they describe the statement layout, the `Price ($)` column, the employer prefix, the old Fidelity row shapes, and "no test suite", all of which change.
 - (DONE) README: update "Setup", "Data Sources", "Text Report", "Charts", "CSV Exports", "Validation & Testing" and "Field Reference"
   - Why: they still describe statement CSVs, the account-name prefix, the per-account-type exports and charts, the removed fields, and tests as planned.
+
+### Back up the previous output before each run
+**Why:** Every run of `src/main.py` overwrites the CSVs and `stats.txt` in `$FINANCE_DATA_DIR/parsed_data/`, so the previous run's numbers are lost. Keeping a copy lets me not only preserve important files just in case the tool breaks, but also lets me keep a truthful history of records.
+
+Done when a run writes its new output to `parsed_data/` then IMMEDIATELY copies the new output it just made into a new `$FINANCE_DATA_DIR/old_parsed_data/YYYY-MM-DD_HH-MM-SS/` folder.
+**Note**: I have already backed up my old data before this whole rewrite. And it's most beneficial to date by the day data was produced. This is why I'm opting for making a backup of the current output instead of a backup of the last output
+Not included: deleting old backups.
+
+- (DONE) Decide which date and time names each backup folder. Format decided: `YYYY-MM-DD_HH-MM-SS`
+  - Why the date AND time: for debugging purposes.
+  - Why that format: folder names sort by date, and it avoids `:`, which Windows doesn't allow in file names.
+- (TODO) `src/config.py`: add `OLD_PARSED_DATA_DIR`, the `old_parsed_data` folder inside `FINANCE_DATA_DIR`, next to `PARSED_DATA_DIR`
+  - Why: `config.py` defines where output goes, so the backup location belongs there too.
+- (TODO) `src/main.py`: immediately after the last file is written to and before any other logic, copy `parsed_data/` into a new `old_parsed_data/YYYY-MM-DD_HH-MM-SS/` folder with `shutil.copytree`
+  - Why `shutil.copytree`: one standard-library call copies every file and creates `old_parsed_data/` the first time.
+- (TODO) Run `python src/main.py` on your real data and check that `old_parsed_data/` has a new folder holding the files `parsed_data/` had before the run (you)
+  - Why: tests can't import `main.py` without reading your `.env`, so this is checked by hand. It can be the same run as the Fidelity ticket's real-data check.
+- (TODO) `CLAUDE.md` "Running" and README "CSV Exports": mention the backup folder
+  - Why: both describe where output goes, and backups pile up until they're deleted by hand.
 
 ### Test harness
 Done when the test suite passes using fixtures alone.
