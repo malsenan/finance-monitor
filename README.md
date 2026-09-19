@@ -268,15 +268,16 @@ Not included: deleting old backups.
 - (DONE) `CLAUDE.md` "Running" and README "CSV Exports": mention the backup folder
   - Why: both describe where output goes, and backups pile up until they're deleted by hand.
 
-### 5. Make config pretty 
+### 5. Make config pretty (1 subtask left)
 **Why:** I literally only use the .env file and the config.py file looks *really* ugly right now and the usage of `os.path.join` in main.py is also *really* fugly. 
-- (TODO) Replace the _load_env_file function with dotenv package
+- (DONE) Replace the _load_env_file function with dotenv package
   - Why: The way we're grabbing .env files is really ugly and easily replaced by a package, especially because a requirements.txt file is now being used
-- (TODO) Replace all the os.path.join in main.py with variables in config.py
+- (DONE) Replace all the os.path.join in main.py with variables in config.py
   - Why: I feel like config is where shit like this should live and main.py has been looking ugly
-- (TODO) Replace any other pathing stuff for clean config responsibilities
+- (DONE) Replace any other pathing stuff for clean config responsibilities
   - Why: main.py and config.py might not be the only places needing paths defined, so change elsewhere too.
-- (TODO) Test the tool on my real data
+  - Answer: nothing else to move. The only other path code is `aggregate_credit_files` listing the credit folder it's given, which is parser work.
+- (TODO) Test the tool on my real data (you)
   - Why: Make sure nothing is broken
 
 ### 6. Drop the summary table from checking and savings files and code (TODO)

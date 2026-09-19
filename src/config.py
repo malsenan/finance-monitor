@@ -1,25 +1,7 @@
 import os
+from datetime import datetime
 
-# .env lives in the repo root, one level above src/
-_ENV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
-
-
-def _load_env_file(path: str) -> None:
-    """
-    Populates os.environ from a KEY=VALUE file.
-
-    Real environment variables take precedence, so values can be overridden without
-    editing the file. Blank lines and lines starting with '#' are ignored.
-    """
-    if not os.path.exists(path):
-        return
-    with open(path) as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, value = line.split("=", 1)
-            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+from dotenv import load_dotenv
 
 
 def _require(key: str) -> str:
@@ -32,14 +14,32 @@ def _require(key: str) -> str:
     return value
 
 
-_load_env_file(_ENV_PATH)
+# Finds .env in src/ or the repo root. Real environment variables take precedence over it
+load_dotenv()
 
 # Root directory holding the exported statement files (see README for the expected layout)
 DATA_DIR = _require("FINANCE_DATA_DIR")
+CREDIT_DIR = os.path.join(DATA_DIR, "bofa", "credit")
+CHECKING_FILE = os.path.join(DATA_DIR, "bofa", "debit", "checkingTransactions.csv")
+SAVINGS_FILE = os.path.join(DATA_DIR, "bofa", "savings", "savingsTransactions.csv")
+FIDELITY_FILE = os.path.join(DATA_DIR, "fidelity", "fidelityTransactions.csv")
+
 # Where the parsed CSVs and stats.txt are written
 PARSED_DATA_DIR = os.path.join(DATA_DIR, "parsed_data")
+PARSED_CREDIT_FILE = os.path.join(PARSED_DATA_DIR, "parsedCreditTransactions.csv")
+PARSED_CHECKING_FILE = os.path.join(PARSED_DATA_DIR, "parsedCheckingTransactions.csv")
+PARSED_SAVINGS_FILE = os.path.join(PARSED_DATA_DIR, "parsedSavingsTransactions.csv")
+BANK_SUMMARIES_FILE = os.path.join(PARSED_DATA_DIR, "bankAccountSummaries.csv")
+PARSED_FIDELITY_TRANSACTIONS_FILE = os.path.join(PARSED_DATA_DIR, "parsedFidelityTransactions.csv")
+PARSED_FIDELITY_SUMMARIES_FILE = os.path.join(PARSED_DATA_DIR, "parsedFidelitySummaries.csv")
+PARSED_FIDELITY_HOLDINGS_FILE = os.path.join(PARSED_DATA_DIR, "parsedFidelityHoldings.csv")
+ALL_TRANSACTIONS_FILE = os.path.join(PARSED_DATA_DIR, "allParsedTransactions.csv")
+STATS_FILE = os.path.join(PARSED_DATA_DIR, "stats.txt")
+
 # Where each run's output is copied, into a new YYYY-MM-DD_HH-MM-SS folder per run
 OLD_PARSED_DATA_DIR = os.path.join(DATA_DIR, "old_parsed_data")
+# This run's backup folder, named by when the run started
+BACKUP_DIR = os.path.join(OLD_PARSED_DATA_DIR, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 
 # Filename suffix identifying the credit account's exported CSVs (ex: "_1234.csv")
 CREDIT_FILE_SUFFIX = _require("CREDIT_FILE_SUFFIX")

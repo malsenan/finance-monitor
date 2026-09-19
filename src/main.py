@@ -1,5 +1,4 @@
 import heapq
-import os
 import shutil
 from datetime import datetime
 from typing import List
@@ -32,14 +31,14 @@ if __name__ == "__main__":
     plot_fidelity = False
 
     # Aggregate data from all CSV files in the specified directory
-    credit_transactions = aggregate_credit_files(os.path.join(config.DATA_DIR, 'bofa', 'credit'), config.CREDIT_FILE_SUFFIX)
+    credit_transactions = aggregate_credit_files(config.CREDIT_DIR, config.CREDIT_FILE_SUFFIX)
 
     # Parse checking and savings account transactions and summaries
-    checking_summary, checking_transactions = parse_checking_or_savings_file(os.path.join(config.DATA_DIR, 'bofa', 'debit', 'checkingTransactions.csv'))
-    savings_summary, savings_transactions = parse_checking_or_savings_file(os.path.join(config.DATA_DIR, 'bofa', 'savings', 'savingsTransactions.csv'))
+    checking_summary, checking_transactions = parse_checking_or_savings_file(config.CHECKING_FILE)
+    savings_summary, savings_transactions = parse_checking_or_savings_file(config.SAVINGS_FILE)
 
     # Parse Fidelity transactions for every account (401k plans, Roth IRA, individual)
-    all_fidelity_summaries, all_fidelity_holdings = parse_fidelity_transactions(os.path.join(config.DATA_DIR, 'fidelity', 'fidelityTransactions.csv'), config.FIDELITY_ACCOUNTS)
+    all_fidelity_summaries, all_fidelity_holdings = parse_fidelity_transactions(config.FIDELITY_FILE, config.FIDELITY_ACCOUNTS)
 
     # For Fidelity, create separate list that will also hold unrealized_gains and net_worth to save to csv
     enhanced_fidelity_holdings = deepcopy(all_fidelity_holdings)
@@ -104,18 +103,18 @@ if __name__ == "__main__":
         t['net_worth'] = round(sum(curr_balances.values()), 2)
 
     # Save the BofA data to CSV files
-    save_to_csv(credit_transactions, os.path.join(config.PARSED_DATA_DIR, 'parsedCreditTransactions.csv'))
-    save_to_csv(checking_transactions, os.path.join(config.PARSED_DATA_DIR, 'parsedCheckingTransactions.csv'))
-    save_to_csv(savings_transactions, os.path.join(config.PARSED_DATA_DIR, 'parsedSavingsTransactions.csv'))
-    save_to_csv(checking_summary + savings_summary, os.path.join(config.PARSED_DATA_DIR, 'bankAccountSummaries.csv'))
+    save_to_csv(credit_transactions, config.PARSED_CREDIT_FILE)
+    save_to_csv(checking_transactions, config.PARSED_CHECKING_FILE)
+    save_to_csv(savings_transactions, config.PARSED_SAVINGS_FILE)
+    save_to_csv(checking_summary + savings_summary, config.BANK_SUMMARIES_FILE)
 
     # Save the Fidelity data to CSV files
-    save_to_csv(fidelity_transactions, os.path.join(config.PARSED_DATA_DIR, 'parsedFidelityTransactions.csv'))
-    save_to_csv(all_fidelity_summaries, os.path.join(config.PARSED_DATA_DIR, 'parsedFidelitySummaries.csv'))
-    save_to_csv(enhanced_fidelity_holdings, os.path.join(config.PARSED_DATA_DIR, 'parsedFidelityHoldings.csv'))
+    save_to_csv(fidelity_transactions, config.PARSED_FIDELITY_TRANSACTIONS_FILE)
+    save_to_csv(all_fidelity_summaries, config.PARSED_FIDELITY_SUMMARIES_FILE)
+    save_to_csv(enhanced_fidelity_holdings, config.PARSED_FIDELITY_HOLDINGS_FILE)
     
     # Save the all aggregated data to a CSV file
-    save_to_csv(all_transactions, os.path.join(config.PARSED_DATA_DIR, 'allParsedTransactions.csv'))
+    save_to_csv(all_transactions, config.ALL_TRANSACTIONS_FILE)
 
     # Log human readable statistics and transaction stuff
     lines: List[str] = [line for line in
@@ -141,11 +140,11 @@ if __name__ == "__main__":
     lines.insert(0, f"Net worth: {round(checking_balance + savings_balance + credit_balance, 2)}\n")
 
     # Log the human readable data
-    with open(os.path.join(config.PARSED_DATA_DIR, 'stats.txt'), 'w') as stats_file:
+    with open(config.STATS_FILE, 'w') as stats_file:
         stats_file.write('\n'.join(lines))
 
     # Back up this run's output into a folder named by when it was produced
-    shutil.copytree(config.PARSED_DATA_DIR, os.path.join(config.OLD_PARSED_DATA_DIR, datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
+    shutil.copytree(config.PARSED_DATA_DIR, config.BACKUP_DIR)
 
     if plot_balances:
         # Plot net worth over time (checking + savings - credit)
