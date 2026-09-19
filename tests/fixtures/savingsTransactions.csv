@@ -1,0 +1,6 @@
+Date,Description,Amount,Running Bal.
+01/05/2026,"KEEPTHECHANGE CREDIT FROM ACCT0000 EFFECTIVE 01/04","0.75","5,000.75"
+02/04/2026,"Interest Earned","0.06","5,000.81"
+02/10/2026,"Online Banking transfer from CHK 0000 Confirmation# 1111111111","1,000.00","6,000.81"
+03/04/2026,"Interest Earned","0.06","6,000.87"
+03/20/2026,"Online Banking transfer to CHK 0000 Confirmation# 2222222222","-500.00","5,500.87"

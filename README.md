@@ -149,7 +149,9 @@ Once these files and `stats.txt` are written, every run copies `parsed_data/` in
 Every check that confirms the tool's numbers, current and planned. Add new suites and harnesses here.
 
 - **Balance validation** (runs every time) — `validate_balance` in `src/validator.py` starts from the oldest checking and savings balance, adds each transaction's amount, and checks the result against each row's running balance. On a mismatch it prints `MAJOR ALERT` instead of stopping.
-- **Unit tests** — run `pytest` from the repo root. They use synthetic fixtures under `tests/fixtures/` only, never real data. Tests for the BofA parsers, reporters, validator and exporters are still planned (see the "Test harness" ticket).
+- **Unit tests** — run `pytest` from the repo root. They use synthetic fixtures under `tests/fixtures/` only, never real data. The validator and exporter have no tests.
+- **BofA parser tests** — `tests/test_bofa_parsers.py` parses made-up checking and savings files and two credit files, and compares the output rows with expected values, including the credit running balance across both files.
+- **Reporter tests** — `tests/test_reporters.py` runs each `stats.txt` reporter on the fixtures and checks the values in its output lines, not the exact lines.
 - **Fidelity parser tests** — `tests/test_fidelity_parser.py` replays the made-up rows in `docs/fidelity-transactions.md` and expects the numbers in its worked examples.
 - **Fidelity balances vs. real balances** (manual, planned) — after everything's been implemented, my ultimate validation test for Fidelity will be seeing the calculated net balances match the actual net balances when I run the tool on my actual data.
 
@@ -276,7 +278,7 @@ Not included: deleting old backups.
 - (DONE) Replace any other pathing stuff for clean config responsibilities
   - Why: main.py and config.py might not be the only places needing paths defined, so change elsewhere too.
   - Answer: nothing else to move. The only other path code is `aggregate_credit_files` listing the credit folder it's given, which is parser work.
-- (TODO) Test the tool on my real data (you)
+- (DONE) Test the tool on my real data (you)
   - Why: Make sure nothing is broken
 
 ### 6. Drop the summary table from checking and savings files and code (DONE)
@@ -293,7 +295,7 @@ Done when both files start with the `Date,Description,Amount,Running Bal.` heade
 - (DONE) README "How to Update Financial Files" and "CSV Exports", and `CLAUDE.md` "Parser fragility": say the files start at the header row, that pasted downloads leave out the summary, and remove the summaries export
   - Why: they describe the summary rows, the row offsets and `bankAccountSummaries.csv`, which no longer exist.
 
-### 7. Test harness (TODO)
+### 7. Test harness (DONE)
 **Why:** Only the Fidelity parser has tests. The BofA parsers, the reporters, the validator and the exporter can only be checked by running the tool on real data, which Claude never does. A few simple tests on made-up rows check their output without a `.env`.
 
 Done when the test suite passes using fixtures alone.
@@ -302,15 +304,16 @@ Not included: `main.py`'s merge and derive steps, and `charts.py`. Functions are
 
 - (DONE) Provide one masked sample of each remaining export type (checking, savings, credit) (you)
   - Why: the fixtures copy the real layout. A few rows from the top of each file are enough, since `csv.DictReader` handles the rest.
-- (TODO) Made-up fixtures under `tests/fixtures/`: `checkingTransactions.csv`, `savingsTransactions.csv`, and a `credit/` folder with two files ending in a made-up suffix. Then delete `sample.deleteme.txt`
+- (DONE) Made-up fixtures under `tests/fixtures/`: `checkingTransactions.csv`, `savingsTransactions.csv`, and a `credit/` folder with two files ending in a made-up suffix. Then delete `sample.deleteme.txt`
   - Why: they copy the samples' layout with invented values, so no real data enters the repo. The file names matter: the parser tells savings from checking by name, and `aggregate_credit_files` reads every file in the folder that ends in the suffix. Two files check that they're combined into one running balance.
-- (TODO) `tests/test_bofa_parsers.py`: one test for `parse_checking_or_savings_file` and one for `aggregate_credit_files`, comparing the output rows with expected values
+- (DONE) `tests/test_bofa_parsers.py`: one test for `parse_checking_or_savings_file` and one for `aggregate_credit_files`, comparing the output rows with expected values
   - Why: every report, chart and total starts from these rows.
-- (TODO) `tests/test_reporters.py`: one test per reporter in `src/reporters.py`, fed from the fixtures, checking the values in the output lines rather than the exact lines
+- (DONE) `tests/test_reporters.py`: one test per reporter in `src/reporters.py`, fed from the fixtures, checking the values in the output lines rather than the exact lines
   - Why: `stats.txt` is built from these. Checking values means a layout change doesn't break the tests.
-- (TODO) For each test that fails because of a bug in the code, mark the test `xfail` and add a ticket for the bug at the bottom of the TODO list
+- (DONE) For each test that fails because of a bug in the code, mark the test `xfail` and add a ticket for the bug at the bottom of the TODO list
   - Why: the suite still passes, the failing test stays in place as the bug's starting point, and each fix gets its own reviewed ticket.
-- (TODO) Update docomentation; README "Validation & Testing": list the new tests instead of calling them planned
+  - Answer: no test failed, so no bug tickets were added.
+- (DONE) Update docomentation; README "Validation & Testing": list the new tests instead of calling them planned
   - Why: that section lists every check the tool has.
 
 ### 8. Final product (INVESTIGATE)
