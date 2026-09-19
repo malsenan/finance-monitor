@@ -163,9 +163,10 @@ Direction, decided 2026-09-12:
 
 ## TODO
 
-Tickets are in priority order: work top to bottom, and insert new tickets wherever they belong. Mark each subtask (TODO) or (DONE). Every new ticket explains why the task is needed, and each of its subtasks says why that step is needed.
 
-### Cleanup
+**Tickets are in order of completeness: work top to bottom, and insert new tickets wherever they belong. Mark each subtask (TODO) or (DONE). Every new ticket should explain why the task is needed, and each of its subtasks says why that step is needed. NEVER reference line numbers, ALWAYS reference by file, class, module, and method.**
+
+### 1. Cleanup (DONE)
 Done when a fresh clone needs only `pip install -r requirements.txt` and a filled-in `.env`, and the README matches the code.
 - (DONE) Delete the stale aider files (`.aider.chat.history.md`, `.aider.input.history`, `.aider.tags.cache.v4/`)
 - (DONE) `.gitignore`: drop `.aider*`, narrow `Statement*` and `finances` so test fixtures aren't ignored, and stop ignoring `.vscode/launch.json`
@@ -176,14 +177,14 @@ Done when a fresh clone needs only `pip install -r requirements.txt` and a fille
 - (DONE) README: checking/savings file paths in the download steps
 - (DONE) README: net worth scope, hardcoded report dates, chart flags, the savings rate chart, and the output directory needing to exist
 
-### Decide Fidelity input data shapes
+### 2. Decide Fidelity input data shapes (DONE)
 Certain Fidelity statements can no longer be downloaded as CSV. Done when every Fidelity number the monitor uses comes from a file that can still be downloaded, and the download steps are updated.
 - (DONE) Provide masked samples of the transaction history. They're documented with made-up values in `docs/fidelity-transactions.md`
 - (DONE) Confirm the transaction history includes the 401k and goes back far enough. It covers every account, and `fidelityTransactions.csv` goes back to each account's first deposit
 - (DONE) Decide the sources: `fidelityTransactions.csv` only, rebuilt once from fresh `Accounts_History.csv` downloads (see the rewrite ticket below), with new downloads pasted at the top. `Portfolio_Positions` isn't needed for now (moved to the backlog), so the positions-file and gap-months subtasks were dropped
 - (DONE) Replace the dead Fidelity steps under "How to Update Financial Files"
 
-### Rewrite Fidelity parsing for `fidelityTransactions.csv`
+### 3. Rewrite Fidelity parsing for `fidelityTransactions.csv` (1 subtask left)
 **Why:** The Roth IRA and individual account are parsed from statement CSVs, which can't be downloaded anymore. `fidelityTransactions.csv` holds every Fidelity account's full history, but the only parser that reads it, `parse_fidelity_401k`, was written for an older export layout:
 - it reads share counts from `Price ($)`, where the old export put them, but current downloads put them under `Quantity`
 - it ignores every row except `Contributions`
@@ -238,14 +239,14 @@ Not changing: `charts.py`, `reporters.py`, `exporters.py`, `validator.py`, and `
 - (TODO) `docs/fidelity-transactions.md`: add the Actions found in your real file, each with a made-up sample row: `Dividend`, `REVENUE CREDIT` and `ADMINISTRATIVE FEES` (401k), and `YOU SOLD` (brokerage)
   - Why: the doc is the spec, so it should cover every Action in the file. Replaying your sample rows showed the rules already handle `Dividend`, `REVENUE CREDIT` and `YOU SOLD`: dividends and revenue credits add shares and cost basis without changing the price, and a sale removes shares along with their average cost. Only the doc changes.
   - Needs: one masked `ADMINISTRATIVE FEES` row (you), to confirm whether its `Quantity` removes shares like the other fees or is 0.
-- (TODO) Run `python src/main.py` on your real data and compare the Fidelity balances with Fidelity's website (you)
+- (DONE) Run `python src/main.py` on your real data and compare the Fidelity balances with Fidelity's website (you)
   - Why: it's the final check under "Validation & Testing", and Claude never runs the tool on real data. If a balance is off by more than the known limits explain, look for an Action that isn't in the doc and send a masked row of it.
 - (DONE) `CLAUDE.md`: update "Running", "Data privacy", "Architecture" and "Parser fragility"
   - Why: they describe the statement layout, the `Price ($)` column, the employer prefix, the old Fidelity row shapes, and "no test suite", all of which change.
 - (DONE) README: update "Setup", "Data Sources", "Text Report", "Charts", "CSV Exports", "Validation & Testing" and "Field Reference"
   - Why: they still describe statement CSVs, the account-name prefix, the per-account-type exports and charts, the removed fields, and tests as planned.
 
-### Back up the output after each run
+### 4. Back-up the output after each run (DONE)
 **Why:** Every run of `src/main.py` overwrites the CSVs and `stats.txt` in `$FINANCE_DATA_DIR/parsed_data/`, so the previous run's numbers are lost. Keeping a copy lets me not only preserve important files just in case the tool breaks, but also lets me keep a truthful history of records.
 
 Done when a run writes its new output to `parsed_data/` then IMMEDIATELY copies the new output it just made into a new `$FINANCE_DATA_DIR/old_parsed_data/YYYY-MM-DD_HH-MM-SS/` folder.
@@ -264,13 +265,13 @@ Not included: deleting old backups.
 - (DONE) `CLAUDE.md` "Running" and README "CSV Exports": mention the backup folder
   - Why: both describe where output goes, and backups pile up until they're deleted by hand.
 
-### Drop the summary section from checking and savings files
-**Why:** `checkingTransactions.csv` and `savingsTransactions.csv` start with an account summary that has its own column names, above the transaction table, so each file holds two tables. The parser reads both by fixed row numbers (`src/parsers.py:33`, `src/parsers.py:45`). Without the summary, each file is a plain CSV with one header row that `csv.DictReader` reads directly.
+### 5. Drop the summary table from checking and savings files and code (TODO)
+**Why:** `checkingTransactions.csv` and `savingsTransactions.csv` used to start with an account summary that has its own column names, above the transaction table, so each file holds two tables. That top table is not only hard to keep updated, but is also worthless because literally all of the data is parsed anyway. With the summary, the parser reads both tables by fixed row numbers. Without the summary, each file is a plain CSV with one header row that `csv.DictReader` reads directly.
 
 Done when both files start with the `Date,Description,Amount,Running Bal.` header and nothing in the tool reads or writes the summary.
 
-- (TODO) Delete the lines above the `Date,Description,Amount,Running Bal.` header in your real `checkingTransactions.csv` and `savingsTransactions.csv` (you)
-  - Why: the new parser reads the header from the first line, and Claude never edits real data.
+- (DONE) Delete the lines above the `Date,Description,Amount,Running Bal.` header in your real `checkingTransactions.csv` and `savingsTransactions.csv` (me)
+  - Why: the new parser reads the header from the first line.
 - (TODO) `src/parsers.py`: `parse_checking_or_savings_file` reads the file with `csv.DictReader` and returns only the transactions
   - Why: with one header row, the row offsets and the summary list have no use.
 - (TODO) `src/main.py`: drop `checking_summary` and `savings_summary` (lines 38-39) and the `bankAccountSummaries.csv` export (line 110). The `Net worth:` line takes the checking and savings balances from each account's newest row instead (lines 138-139)
@@ -278,7 +279,7 @@ Done when both files start with the `Date,Description,Amount,Running Bal.` heade
 - (TODO) README "How to Update Financial Files" and "CSV Exports", and `CLAUDE.md` "Parser fragility": say the files start at the header row, that pasted downloads leave out the summary, and remove the summaries export
   - Why: they describe the summary rows, the row offsets and `bankAccountSummaries.csv`, which no longer exist.
 
-### Test harness
+### 6. Test harness (TODO)
 **Why:** Only the Fidelity parser has tests. The BofA parsers, the reporters, the validator and the exporter can only be checked by running the tool on real data, which Claude never does. A few simple tests on made-up rows check their output without a `.env`.
 
 Done when the test suite passes using fixtures alone.
@@ -298,7 +299,7 @@ Not included: `main.py`'s merge and derive steps, and `charts.py`. Functions are
 - (TODO) Update docomentation; README "Validation & Testing": list the new tests instead of calling them planned
   - Why: that section lists every check the tool has.
 
-### Final product
+### 7. Final product (INVESTIGATE)
 Done when the chosen product runs locally on real data.
 - (TODO) Decide the final product (leaning towards a local, interactive dashboard)
 - (TODO) Choose a stack that keeps data local (e.g. Streamlit, or a static HTML page generated by `main.py`)
@@ -306,20 +307,20 @@ Done when the chosen product runs locally on real data.
 - (TODO) Decide what it shows: net worth, cash flow, spending by category, credit utilization, retirement contributions, holdings, data freshness
 - (TODO) Decide whether `stats.txt` and the matplotlib windows stay once the product covers them
 
-### Features
+### 8. Features (INVESTIGATE)
 - (TODO) Spending categories, using keyword rules kept in a gitignored local file
 - (TODO) Retirement contributions vs. annual limits (401k, Roth IRA)
 - (TODO) Credit utilization vs. the 30% target (needs a credit limit setting)
 - (TODO) Net worth forecast
 - (TODO) Brainstorm other stats worth tracking
 
-### Nice to have
+### 9. Nice to have (INVESTIGATE)
 - (TODO) Flag recurring charges that changed price, and newly appearing subscriptions
 - (TODO) Data freshness: latest record per source, flagging a missing download
 - (TODO) Emergency runway: months of spending covered by cash
 - (TODO) Hide-amounts toggle for screen sharing
 
-### Chart backlog
+### 10. Chart backlog (INVESTIGATE)
 Trimmed from the old Charts TODO list.
 - (TODO) Spending by category
 - (TODO) Credit utilization over time
