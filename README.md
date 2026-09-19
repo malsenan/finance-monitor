@@ -47,8 +47,8 @@ Note: Some of the strings in the headers don't render properly in markdown view 
 2. Click on the account (Banking or Savings) and make sure you are on the 'Activity' tab and under 'Currently viewing' it says "Transaction history"
 4. Click on 'Download'
 5. Set timeframe and download as Excel format
-6. Copy/paste the new csv's *contents* to the **bottom** of the existing .csv transactions file in `$FINANCE_DATA_DIR/bofa/(debit or savings)`
-- Headers: Date,Description,Amount,Running Bal.
+6. Copy/paste the new csv's transaction rows (below its header, leaving out the account summary above it) to the **bottom** of the existing .csv transactions file in `$FINANCE_DATA_DIR/bofa/(debit or savings)`
+- Headers: Date,Description,Amount,Running Bal. (the file starts at this header row)
 
 ### BofA Credit Account (needed for the monitor)
 **Latest update to files: 9/12/2026**
@@ -138,7 +138,6 @@ Charts open in pop-up windows. Most are switched on by the `plot_balances`, `plo
 Saves parsed versions of every data source to `$FINANCE_DATA_DIR/parsed_data/`, which must already exist:
 - Credit, checking, savings transactions
 - All transactions combined
-- Bank account summaries
 - Fidelity holdings (with unrealized gains), Fidelity transactions, Fidelity account summaries
 
 ### Backups
@@ -280,18 +279,18 @@ Not included: deleting old backups.
 - (TODO) Test the tool on my real data (you)
   - Why: Make sure nothing is broken
 
-### 6. Drop the summary table from checking and savings files and code (TODO)
+### 6. Drop the summary table from checking and savings files and code (DONE)
 **Why:** `checkingTransactions.csv` and `savingsTransactions.csv` used to start with an account summary that has its own column names, above the transaction table, so each file holds two tables. That top table is not only hard to keep updated, but is also worthless because literally all of the data is parsed anyway. With the summary, the parser reads both tables by fixed row numbers. Without the summary, each file is a plain CSV with one header row that `csv.DictReader` reads directly.
 
 Done when both files start with the `Date,Description,Amount,Running Bal.` header and nothing in the tool reads or writes the summary.
 
 - (DONE) Delete the lines above the `Date,Description,Amount,Running Bal.` header in your real `checkingTransactions.csv` and `savingsTransactions.csv` (me)
   - Why: the new parser reads the header from the first line.
-- (TODO) `src/parsers.py`: `parse_checking_or_savings_file` reads the file with `csv.DictReader` and returns only the transactions
+- (DONE) `src/parsers.py`: `parse_checking_or_savings_file` reads the file with `csv.DictReader` and returns only the transactions
   - Why: with one header row, the row offsets and the summary list have no use.
-- (TODO) `src/main.py`: drop `checking_summary` and `savings_summary` (lines 38-39) and the `bankAccountSummaries.csv` export (line 110). The `Net worth:` line takes the checking and savings balances from each account's newest row instead (lines 138-139)
+- (DONE) `src/main.py`: drop `checking_summary` and `savings_summary` (lines 38-39) and the `bankAccountSummaries.csv` export (line 110). The `Net worth:` line takes the checking and savings balances from each account's newest row instead (lines 138-139)
   - Why: these are the only places the summary is used. The newest row's running balance is the account's current balance, and credit's balance is already taken that way (line 140).
-- (TODO) README "How to Update Financial Files" and "CSV Exports", and `CLAUDE.md` "Parser fragility": say the files start at the header row, that pasted downloads leave out the summary, and remove the summaries export
+- (DONE) README "How to Update Financial Files" and "CSV Exports", and `CLAUDE.md` "Parser fragility": say the files start at the header row, that pasted downloads leave out the summary, and remove the summaries export
   - Why: they describe the summary rows, the row offsets and `bankAccountSummaries.csv`, which no longer exist.
 
 ### 7. Test harness (TODO)

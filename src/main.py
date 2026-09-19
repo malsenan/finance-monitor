@@ -33,9 +33,9 @@ if __name__ == "__main__":
     # Aggregate data from all CSV files in the specified directory
     credit_transactions = aggregate_credit_files(config.CREDIT_DIR, config.CREDIT_FILE_SUFFIX)
 
-    # Parse checking and savings account transactions and summaries
-    checking_summary, checking_transactions = parse_checking_or_savings_file(config.CHECKING_FILE)
-    savings_summary, savings_transactions = parse_checking_or_savings_file(config.SAVINGS_FILE)
+    # Parse checking and savings account transactions
+    checking_transactions = parse_checking_or_savings_file(config.CHECKING_FILE)
+    savings_transactions = parse_checking_or_savings_file(config.SAVINGS_FILE)
 
     # Parse Fidelity transactions for every account (401k plans, Roth IRA, individual)
     all_fidelity_summaries, all_fidelity_holdings = parse_fidelity_transactions(config.FIDELITY_FILE, config.FIDELITY_ACCOUNTS)
@@ -106,7 +106,6 @@ if __name__ == "__main__":
     save_to_csv(credit_transactions, config.PARSED_CREDIT_FILE)
     save_to_csv(checking_transactions, config.PARSED_CHECKING_FILE)
     save_to_csv(savings_transactions, config.PARSED_SAVINGS_FILE)
-    save_to_csv(checking_summary + savings_summary, config.BANK_SUMMARIES_FILE)
 
     # Save the Fidelity data to CSV files
     save_to_csv(fidelity_transactions, config.PARSED_FIDELITY_TRANSACTIONS_FILE)
@@ -134,8 +133,8 @@ if __name__ == "__main__":
     ]
 
     # Calculate net worth and put it at the top of the file
-    checking_balance = checking_summary[-1]["amount"]
-    savings_balance = savings_summary[-1]["amount"]
+    checking_balance = checking_transactions[0]["balance"]
+    savings_balance = savings_transactions[0]["balance"]
     credit_balance = credit_transactions[0]["balance"]
     lines.insert(0, f"Net worth: {round(checking_balance + savings_balance + credit_balance, 2)}\n")
 

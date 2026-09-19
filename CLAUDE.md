@@ -125,7 +125,7 @@ The pipeline is flat, and `main.py` is the only orchestrator: **parsers → merg
 
 The exports have no stable schema:
 
-- **Checking/savings:** the parser relies on fixed row offsets: summary on rows 1–4, transaction header on row 6. Whether the account is `savings` or `checking` is inferred from the filename.
+- **Checking/savings:** each file starts at the `Date,Description,Amount,Running Bal.` header row. BofA downloads put an account summary above that header, which is left out when new rows are pasted in. Whether the account is `savings` or `checking` is inferred from the filename.
 - **Fidelity (`parse_fidelity_transactions`):** reads `fidelityTransactions.csv` by column name. `docs/fidelity-transactions.md` is the spec: row meanings, rules, output and worked examples, which `tests/test_fidelity_parser.py` replays. Only the current export layout is supported, and the parser assumes valid input (no error handling). Account numbers map to labels through `FIDELITY_ACCOUNT_<LABEL>=<account number>` settings in `.env`.
 
 If a parse breaks after a new download, suspect a change in the export layout before suspecting a logic bug.

@@ -6,59 +6,38 @@ from itertools import groupby
 
 from models import BankTransaction, FidelityTransaction
 
-def parse_checking_or_savings_file(file_path: str) -> Tuple[List[Dict[str, object]], List[BankTransaction]]:
+def parse_checking_or_savings_file(file_path: str) -> List[BankTransaction]:
     """
     Parses a checking or savings transactions CSV file and returns the processed data.
 
-    BofA CSV layout:
-      Row 0:   Account summary header
-      Rows 1-4: Account summary entries (beginning balance, deposits, etc.)
-      Row 5:   Blank
-      Row 6:   BankTransaction header
-      Rows 7+: Individual transactions (oldest to newest in file)
+    BofA CSV has a Date,Description,Amount,Running Bal. header row followed by one
+    transaction per row (oldest to newest in file).
 
     Parameters:
     - file_path (str): The path to the checking or savings CSV file.
 
     Returns:
-    - (account_summary, transactions): account_summary is a list of balance/summary dicts;
-      transactions is a list of individual transaction dicts sorted newest to oldest.
+    - List[Dict[str, object]]: A list of transaction dicts sorted newest to oldest.
     """
-
-    # Read all lines so we can slice by row index for the two sections
     with open(file_path, newline="") as f:
-        lines = f.readlines()
-
-    # Rows 1-4: account summary entries (row 0 is the header)
-    reader = csv.DictReader(lines[1:5], fieldnames=next(csv.reader([lines[0]])))
-    account_summary = [
-        {
-            # Detect account type from the filename (BofA files include "savings" or not)
-            "account": "savings" if file_path.lower().count("savings") > 0 else "checking",
-            "description": row["Description"],
-            "amount": round(float(row["Summary Amt."].replace(",", "")), 2),
-        }
-        for row in reader
-    ]
-
-    # Rows 7+: individual transactions (row 6 is the header)
-    reader = csv.DictReader(lines[7:], fieldnames=next(csv.reader([lines[6]])))
-    transactions = [
-        {
-            "date": transaction["Date"],
-            "account": "savings" if file_path.lower().count("savings") > 0 else "checking",
-            "description": transaction["Description"],
-            # Amount may be blank for certain rows; default to 0 to avoid conversion errors
-            "amount": round(float(transaction["Amount"].replace(",", "")) if transaction["Amount"] else 0, 2),
-            "balance": round(float(transaction["Running Bal."].replace(',', '')), 2),
-        }
-        for transaction in reader
-    ]
+        reader = csv.DictReader(f)
+        transactions = [
+            {
+                "date": transaction["Date"],
+                # Detect account type from the filename (BofA files include "savings" or not)
+                "account": "savings" if file_path.lower().count("savings") > 0 else "checking",
+                "description": transaction["Description"],
+                # Amount may be blank for certain rows; default to 0 to avoid conversion errors
+                "amount": round(float(transaction["Amount"].replace(",", "")) if transaction["Amount"] else 0, 2),
+                "balance": round(float(transaction["Running Bal."].replace(',', '')), 2),
+            }
+            for transaction in reader
+        ]
 
     # BofA exports oldest-first; reverse so callers receive newest-first
     transactions.reverse()
 
-    return account_summary, transactions
+    return transactions
 
 def parse_credit_file(file_path: str) -> List[BankTransaction]:
     """
