@@ -279,11 +279,24 @@ Done when both files start with the `Date,Description,Amount,Running Bal.` heade
   - Why: they describe the summary rows, the row offsets and `bankAccountSummaries.csv`, which no longer exist.
 
 ### Test harness
+**Why:** Only the Fidelity parser has tests. The BofA parsers, the reporters, the validator and the exporter can only be checked by running the tool on real data, which Claude never does. A few simple tests on made-up rows check their output without a `.env`.
+
 Done when the test suite passes using fixtures alone.
-- (TODO) Provide one masked sample of each remaining export type (checking, savings, credit), kept outside the repo
-- (TODO) Build fully synthetic fixtures from all the samples under `tests/fixtures/`
-- (TODO) Unit tests for parsers, reporters, validator, and exporters. None of these need a `.env`
-- (TODO) Only then investigate suspected bugs, each starting from a failing test
+
+Not included: `main.py`'s merge and derive steps, and `charts.py`. Functions aren't reworked to make them easier to test. Bugs the tests find aren't fixed here; each one gets its own ticket.
+
+- (DONE) Provide one masked sample of each remaining export type (checking, savings, credit) (you)
+  - Why: the fixtures copy the real layout. A few rows from the top of each file are enough, since `csv.DictReader` handles the rest.
+- (TODO) Made-up fixtures under `tests/fixtures/`: `checkingTransactions.csv`, `savingsTransactions.csv`, and a `credit/` folder with two files ending in a made-up suffix. Then delete `sample.deleteme.txt`
+  - Why: they copy the samples' layout with invented values, so no real data enters the repo. The file names matter: the parser tells savings from checking by name, and `aggregate_credit_files` reads every file in the folder that ends in the suffix. Two files check that they're combined into one running balance.
+- (TODO) `tests/test_bofa_parsers.py`: one test for `parse_checking_or_savings_file` and one for `aggregate_credit_files`, comparing the output rows with expected values
+  - Why: every report, chart and total starts from these rows.
+- (TODO) `tests/test_reporters.py`: one test per reporter in `src/reporters.py`, fed from the fixtures, checking the values in the output lines rather than the exact lines
+  - Why: `stats.txt` is built from these. Checking values means a layout change doesn't break the tests.
+- (TODO) For each test that fails because of a bug in the code, mark the test `xfail` and add a ticket for the bug at the bottom of the TODO list
+  - Why: the suite still passes, the failing test stays in place as the bug's starting point, and each fix gets its own reviewed ticket.
+- (TODO) Update docomentation; README "Validation & Testing": list the new tests instead of calling them planned
+  - Why: that section lists every check the tool has.
 
 ### Final product
 Done when the chosen product runs locally on real data.
